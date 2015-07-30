@@ -1,0 +1,5 @@
+#! /bin/bash
+make clean
+make
+ar rcs libOPT.a *.o
+make clean 

@@ -1,0 +1,5 @@
+rm -rf *.h *_exec
+ln -s ../CodesForLibrary/libOPT.h ./
+
+make
+make clean

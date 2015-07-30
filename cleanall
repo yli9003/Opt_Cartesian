@@ -1,0 +1,15 @@
+#! /bin/bash
+
+export PETSC_DIR=/home/zlin/MyLocal/petsc-3.6.0
+export PETSC_ARCH=arch-opt
+export SLEPC_DIR=/home/zlin/MyLocal/slepc-3.6.0
+export CavityLibPath=./CodesForLibrary
+export NloptLibPath=/usr/local/lib/
+
+cd CodesForLibrary
+make clean
+rm *.a
+
+cd ../optimization/
+make clean
+rm *exec *.h
