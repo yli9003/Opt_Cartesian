@@ -1,0 +1,19 @@
+#! /bin/bash
+#export PETSC_DIR=/home/xdliang/MyLocal/petsc/petsc-3.3-p7
+#export PETSC_ARCH=arch-debug
+
+export PETSC_DIR=/etc/petsc-3.5.3
+export PETSC_ARCH=arch-opt
+export CavityLibPath=$PWD/CodesForLibrary
+export NloptLibPath=/usr/local/lib/
+#xdliang/MyLocal/nlopt_0/.libs
+#export C_INCLUDE_PATH=/home/xdliang/MyLocal/include
+
+cd CodesForLibrary
+bash makelibOPT
+
+cd ../optimization/
+make clean 
+make
+make clean
+
