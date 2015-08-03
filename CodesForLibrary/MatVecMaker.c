@@ -191,9 +191,9 @@ PetscErrorCode GetMediumVecwithSub(Vec epsmedium,int Nz, int Mz, double epsair, 
      {
        iz = i%Nz;
        if (iz<Nz/2 + Mz/2)
-	 value = epsair;
-       else
 	 value = epssub;
+       else
+	 value = epsair;
         
        VecSetValue(epsmedium, i, value, INSERT_VALUES);
 
