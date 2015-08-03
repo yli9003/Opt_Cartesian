@@ -358,7 +358,22 @@ int main(int argc, char **argv)
   PetscOptionsGetInt(PETSC_NULL,"-Jopt",&Jopt,&flg);
 
   if (!flg) Jopt=0;
-  if(Jopt==1){
+  if(Jopt==1){ //make a block source
+    
+    double lx,ux,ly,uy,lz,uz,amp;
+    PetscOptionsGetReal(PETSC_NULL,"-lx",&lx,&flg); MyCheckAndOutputDouble(flg,lx,"lx","lx");
+    PetscOptionsGetReal(PETSC_NULL,"-ux",&ux,&flg); MyCheckAndOutputDouble(flg,ux,"ux","ux");
+    PetscOptionsGetReal(PETSC_NULL,"-ly",&ly,&flg); MyCheckAndOutputDouble(flg,ly,"ly","ly");
+    PetscOptionsGetReal(PETSC_NULL,"-uy",&uy,&flg); MyCheckAndOutputDouble(flg,uy,"uy","uy");
+    PetscOptionsGetReal(PETSC_NULL,"-lz",&lz,&flg); MyCheckAndOutputDouble(flg,lz,"lz","lz");
+    PetscOptionsGetReal(PETSC_NULL,"-uz",&uz,&flg); MyCheckAndOutputDouble(flg,uz,"uz","uz");
+    PetscOptionsGetReal(PETSC_NULL,"-amp",&amp,&flg); MyCheckAndOutputDouble(flg,amp,"amp","amp");
+
+    VecSet(J1,0.0);
+    SourceBlock(PETSC_COMM_WORLD,J1,Nx,Ny,Nz,hx,hy,hz,lx,ux,ly,uy,lz,uz,amp);
+
+  }
+  if(Jopt==2){
     char inputsrc[PETSC_MAX_PATH_LEN];
     PetscOptionsGetString(PETSC_NULL,"-inputsrc",inputsrc,PETSC_MAX_PATH_LEN,&flg); MyCheckAndOutputChar(flg,inputsrc,"inputsrc","Input source current");
 
