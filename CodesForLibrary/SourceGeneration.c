@@ -151,7 +151,7 @@ PetscErrorCode SourceDuplicate(MPI_Comm comm, Vec *bout, int Nx, int Ny, int Nz,
 
 #undef __FUNCT__ 
 #define __FUNCT__ "SourceBlock"
-PetscErrorCode SourceBlock(MPI_Comm comm, Vec *bout, int Nx, int Ny, int Nz, double hx, double hy, double hz, double lx, double ux, double ly, double uy, double lz, double uz, double amp)
+PetscErrorCode SourceBlock(MPI_Comm comm, Vec *bout, int Nx, int Ny, int Nz, double hx, double hy, double hz, double lx, double ux, double ly, double uy, double lz, double uz, double amp, int Jdir)
 {
   int i, j, k, pos, N;
   N = Nx*Ny*Nz;
@@ -174,12 +174,13 @@ PetscErrorCode SourceBlock(MPI_Comm comm, Vec *bout, int Nx, int Ny, int Nz, dou
 	  if ((j*hy>ly) && (j*hy<uy))
 	    { 
 	      for (k=0; k<Nz; k++)
-		//if ((k*hz>lz) && (k*hz<uz)) // uncomment this if z direction is not trivial;
+		if ((k*hz>lz) && (k*hz<uz)) // uncomment this if z direction is not trivial;
 		{ pos = i*Ny*Nz + j*Nz + k;
-		  //VecSetValue(b,pos,amp,INSERT_VALUES);
-		  //VecSetValue(b,pos+N,amp,INSERT_VALUES);
-		   if ( ns < pos+2*N+1 && ne > pos + 2*N)
-		  VecSetValue(b,pos+2*N,amp,INSERT_VALUES);
+		  if ( ns < pos+Jdir*N+1 && ne > pos + Jdir*N){
+		    if(Jdir==0) VecSetValue(b,pos,amp,INSERT_VALUES);
+		    if(Jdir==1) VecSetValue(b,pos+N,amp,INSERT_VALUES);
+		    if(Jdir==2) VecSetValue(b,pos+2*N,amp,INSERT_VALUES);
+		  }
 		}
 	    }
 	    

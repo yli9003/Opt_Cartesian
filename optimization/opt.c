@@ -370,8 +370,8 @@ int main(int argc, char **argv)
     PetscOptionsGetReal(PETSC_NULL,"-amp",&amp,&flg); MyCheckAndOutputDouble(flg,amp,"amp","amp");
 
     VecSet(J1,0.0);
-    SourceBlock(PETSC_COMM_WORLD,J1,Nx,Ny,Nz,hx,hy,hz,lx,ux,ly,uy,lz,uz,amp);
-
+    SourceBlock(PETSC_COMM_WORLD,&J1,Nx,Ny,Nz,hx,hy,hz,lx,ux,ly,uy,lz,uz,amp,J1direction-1);
+    
   }
   if(Jopt==2){
     char inputsrc[PETSC_MAX_PATH_LEN];
