@@ -1,8 +1,11 @@
-all: MoperatorGeneral.o MoperatorGeneralBloch_XdL.o SourceGeneration.o PML.o Eps.o MathTools.o MatVecMaker.o Output.o mympisetup.o ldos.o projsimpoverlap.o singleldos.o ldosonly.o filters.o alpha.o FOM.o ldosconstraint.o lens.o
+all: MoperatorGeneral.o MoperatorGeneralBloch_XdL.o SourceGeneration.o PML.o Eps.o MathTools.o MatVecMaker.o Output.o DifferentialOps.o mympisetup.o ldos.o projsimpoverlap.o singleldos.o ldosonly.o filters.o alpha.o FOM.o ldosconstraint.o lens.o
+
+export PETSC_DIR=/etc/petsc-3.5.3
+export PETSC_ARCH=arch-opt
 
 include ${PETSC_DIR}/conf/variables
 include ${PETSC_DIR}/conf/rules
-CLEANFILES =  MoperatorGeneral.o MoperatorGeneralBloch_XdL.o SourceGeneration.o PML.o Eps.o MathTools.o MatVecMaker.o Output.o mympisetup.o ldos.o projsimpoverlap.o singleldos.o ldosonly.o filters.o alpha.o FOM.o ldosconstraint.o lens.o
+CLEANFILES =  MoperatorGeneral.o MoperatorGeneralBloch_XdL.o SourceGeneration.o PML.o Eps.o MathTools.o MatVecMaker.o Output.o DifferentialOps.o mympisetup.o ldos.o projsimpoverlap.o singleldos.o ldosonly.o filters.o alpha.o FOM.o ldosconstraint.o lens.o
 
 MoperatorGeneral: MoperatorGeneral.o
 	$(CLINKER) -Wall -g -o $@ MoperatorGeneral.o  
@@ -20,6 +23,8 @@ MatVecMaker:MatVecMaker.o
 	$(CLINKER) -Wall -g -o $@ MatVecMaker.o  
 Output:Output.o
 	$(CLINKER) -Wall -g -o $@ Output.o  
+DifferentialOps:DifferentialOps.o
+	$(CLINKER) -Wall -g -o $@ DifferentialOps.o
 mympisetup:mympisetup.o
 	$(CLINKER) -Wall -g -o $@ mympisetup.o
 ldos:ldos.o

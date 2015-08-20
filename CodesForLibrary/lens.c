@@ -23,7 +23,7 @@ extern int itsH;
 #define __FUNCT__ "optfocalpt"
 double optfocalpt(int DegFree, double *epsopt, double *grad, void *data)
 {
-
+  double focalpower;
   PetscErrorCode ierr;
 
   PetscPrintf(PETSC_COMM_WORLD,"********Entering the focal point solver.********** \n");
@@ -49,6 +49,7 @@ double optfocalpt(int DegFree, double *epsopt, double *grad, void *data)
   Vec epscoef = ptdata->epscoef;
   Vec Vecgrad = ptdata->Vecgrad;
   int outputbase = ptdata->outputbase;
+  Mat Diff = ptdata->Diff;
 
   Vec xconj, tmp, u;
   VecDuplicate(vR,&xconj);
@@ -66,26 +67,69 @@ double optfocalpt(int DegFree, double *epsopt, double *grad, void *data)
   ModifyMatDiag(Mopr, D, epsFReal, epsDiff, epsMed, epspmlQ, omega, Nx, Ny, Nz);
   
   SolveMatrix(PETSC_COMM_WORLD,ksp,Mopr,b,x,its);
-  MatMult(C,x,xconj);
-  CmpVecProd(x,xconj,tmp);
-  VecPointwiseMult(tmp,tmp,VecFocalpt);
-  VecPointwiseMult(tmp,tmp,weight);
-  double focalpower;
-  VecSum(tmp, &focalpower);
-  focalpower = hxyz*focalpower;
+  if(Diff){
+    Vec Dx, Grad;
+    int signobj;
+    VecDuplicate(vR,&Dx);
+    VecDuplicate(vR,&Grad);
+    PetscPrintf(PETSC_COMM_WORLD,"***Objective is Conj(E).D.E ****\n");
+    MatMult(C,x,xconj);
+    MatMult(Diff,x,Dx);
+    CmpVecProd(xconj,Dx,tmp);
+    VecPointwiseMult(tmp,tmp,VecFocalpt);
+    VecPointwiseMult(tmp,tmp,weight);
+    VecPointwiseMult(tmp,tmp,vR);
+    VecSum(tmp, &focalpower);
+    focalpower = hxyz*focalpower;
+    signobj=(focalpower<0) ? -1.0 : 1.0;
+    focalpower = fabs(focalpower);
 
-  VecPointwiseMult(tmp,VecFocalpt,xconj);
-  KSPSolve(ksp,tmp,u);
+    MatMult(C,Dx,tmp);
+    VecPointwiseMult(tmp,tmp,VecFocalpt);
+    KSPSolve(ksp,tmp,u);
+    CmpVecProd(u,epscoef,tmp);
+    CmpVecProd(tmp,x,Grad);
 
+    VecPointwiseMult(xconj,xconj,VecFocalpt);
+    MatMultTranspose(Diff,xconj,tmp);
+    KSPSolve(ksp,tmp,u);
+    CmpVecProd(u,epscoef,tmp);
+    CmpVecProd(tmp,x,u);
+    
+    VecAXPY(Grad,1.0,u);
+    VecPointwiseMult(Grad,Grad,weight);
+    VecPointwiseMult(Grad,Grad,vR);
+    VecScale(Grad,hxyz);
+    VecScale(Grad,signobj);
 
-  CmpVecProd(u,epscoef,tmp);
-  CmpVecProd(tmp,x,u);
-  VecPointwiseMult(u,u,weight);
-  VecPointwiseMult(u,u,vR);
-  VecScale(u,2.0);
-  VecScale(u,hxyz);
+    MatMultTranspose(A,Grad,Vecgrad);
 
-  MatMultTranspose(A,u,Vecgrad);
+    VecDestroy(&Dx);
+    VecDestroy(&Grad);
+
+  }else{
+
+    PetscPrintf(PETSC_COMM_WORLD,"***Objective is |E|^2 ****\n");
+    MatMult(C,x,xconj);
+    CmpVecProd(x,xconj,tmp);
+    VecPointwiseMult(tmp,tmp,VecFocalpt);
+    VecPointwiseMult(tmp,tmp,weight);
+    VecSum(tmp, &focalpower);
+    focalpower = hxyz*focalpower;
+
+    VecPointwiseMult(tmp,VecFocalpt,xconj);
+    KSPSolve(ksp,tmp,u);
+
+    CmpVecProd(u,epscoef,tmp);
+    CmpVecProd(tmp,x,u);
+    VecPointwiseMult(u,u,weight);
+    VecPointwiseMult(u,u,vR);
+    VecScale(u,2.0);
+    VecScale(u,hxyz);
+
+    MatMultTranspose(A,u,Vecgrad);
+
+  }
 
   ierr=VecPointwiseMult(Vecgrad,Vecgrad,epsgrad); CHKERRQ(ierr);
   KSPSolveTranspose(kspH,Vecgrad,epsgrad);

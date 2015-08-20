@@ -38,6 +38,7 @@ typedef struct{
   Vec epscoef;
   Vec Vecgrad;
   int outputbase;
+  Mat Diff;
 } LensGroup;
 
 // from MoperatorGeneral.c
@@ -125,6 +126,9 @@ PetscErrorCode MyCheckAndOutputDouble(PetscBool flg, double CmdVar, const char *
 PetscErrorCode MyCheckAndOutputChar(PetscBool flg, char *CmdVar, const char *strCmdVar, const char *strCmdVarDetail);
 
 PetscErrorCode GetIntParaCmdLine(int *ptCmdVar, const char *strCmdVar, const char *strCmdVarDetail);
+
+// from DifferentialOps.c
+PetscErrorCode firstorderDeriv(MPI_Comm comm, Mat *Dout, int Nx, int Ny, int Nz, double dh, int c2, int p, int c1);
 
 // from mympisetup.c
 int mympisetup();

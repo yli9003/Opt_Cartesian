@@ -535,10 +535,12 @@ int main(int argc, char **argv)
   LDOSdataGroup ldos1data = {omega1, M1, A, x1, b1, weightedJ1, epspmlQ1, epsmedium1, epsI,  &its1, epscoef1, vgrad, ksp1};
     
   /*========for lens optimization=======*/
+  Mat Diff;
   Vec VecFocalpt,Vecgrad1;
   VecDuplicate(vR,&VecFocalpt);
   VecDuplicate(epsSReal,&Vecgrad1);
   int focalix, focaliy, focaliz, focalic1, focalic2;
+  int Diffc1=-1, Diffp=-1, Diffc2=-1;
   PetscOptionsGetInt(PETSC_NULL,"-focalix",&focalix,&flg); 
   if(!flg){ focalix=-1, focaliy=0, focaliz=0, focalic1=0, focalic2=0;}
   if(flg) PetscPrintf(PETSC_COMM_WORLD,"-----focalix is %d \n", focalix);
@@ -550,12 +552,22 @@ int main(int argc, char **argv)
   if(flg) PetscPrintf(PETSC_COMM_WORLD,"-----focalic1 is %d \n", focalic1);
   PetscOptionsGetInt(PETSC_NULL,"-focalic2",&focalic2,&flg); 
   if(flg) PetscPrintf(PETSC_COMM_WORLD,"-----focalic2 is %d \n", focalic2);
+  PetscOptionsGetInt(PETSC_NULL,"-Diffc1",&Diffc1,&flg);
+  PetscOptionsGetInt(PETSC_NULL,"-Diffp", &Diffp, &flg);
+  PetscOptionsGetInt(PETSC_NULL,"-Diffc2",&Diffc2,&flg);
+
+  PetscPrintf(PETSC_COMM_WORLD,"----We will use Diff(%d,%d,%d) for E.Diff.E in lens optimization. \n", Diffc2, Diffp, Diffc1);
 
   if(focalix<0)
     VecSet(VecFocalpt,0.0);
   else
     MakeVecFocalpt(VecFocalpt, Nx, Ny, Nz, focalix, focaliy, focaliz, focalic1, focalic2);
-  LensGroup lensdata = {Nx,Ny,Nz,hxyz,omega1,ksp1,&its1,M1,b1,x1,VecFocalpt,epsSReal,epsFReal,epsI,epsmedium1,epspmlQ1,epscoef1,Vecgrad1,outputbase};
+  LensGroup lensdata = {Nx,Ny,Nz,hxyz,omega1,ksp1,&its1,M1,b1,x1,VecFocalpt,epsSReal,epsFReal,epsI,epsmedium1,epspmlQ1,epscoef1,Vecgrad1,outputbase,PETSC_NULL};
+  if(Diffc1>=0 && Diffp>=0 && Diffc2>=0){
+    firstorderDeriv(PETSC_COMM_WORLD, &Diff, Nx, Ny, Nz, (Diffp==0)*hx + (Diffp==1)*hy + (Diffp==2)*hz, Diffc2, Diffp, Diffc1);
+    lensdata.Diff=Diff;
+  }
+
   /*========for lens optimization=========*/
 
 if (Job==1){
@@ -1048,6 +1060,8 @@ if (Job==4){
   ierr = MatDestroy(&M1); CHKERRQ(ierr);  
   ierr = MatDestroy(&M2); CHKERRQ(ierr);
   ierr = MatDestroy(&Hfilt); CHKERRQ(ierr);
+
+  ierr = MatDestroy(&Diff); CHKERRQ(ierr);
 
   ierr = VecDestroy(&vR); CHKERRQ(ierr);
   ierr = VecDestroy(&weight); CHKERRQ(ierr);
