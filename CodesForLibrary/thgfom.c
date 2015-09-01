@@ -6,8 +6,6 @@
 
 #define Ptime PetscTime
 
-extern double penalty;
-
 extern Mat Hfilt;
 extern KSP kspH;
 extern PC pcH;
@@ -393,11 +391,13 @@ double thgfom(int DegFree,double *epsopt, double *grad, void *data)
     ierr = VecToArray(epsgrad,grad,scatter,from,to,vgradlocal,DegFree);
   
     /**START: penalty calculation in objective and gradient**/
-    if(penalty){
+
+    /*if(penalty){
       int ip;
       for (ip=0;ip<DegFree;ip++) {
         fom = fom - penalty * epsopt[ip] * (1-epsopt[ip]);
-        grad[ip] = grad[ip] -1.0 * penalty * (1 - 2 * epsopt[ip]);}}
+        grad[ip] = grad[ip] -1.0 * penalty * (1 - 2 * epsopt[ip]);}}*/
+    
     /**FINISHED: penalty calculation in objective and gradient**/ 
 
 

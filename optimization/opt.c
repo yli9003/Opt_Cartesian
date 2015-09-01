@@ -641,8 +641,19 @@ if (Job==1){
     nlopt_set_max_objective(opt,FOM,NULL);
  
   }
-  else{
+  else if (optjob==5){
     nlopt_set_max_objective(opt,optfocalpt,&lensdata);
+  }
+  else if (optjob==6){
+    PetscOptionsGetReal(PETSC_NULL,"-ldospowerindex",&ldospowerindex,&flg);
+    if(!flg) ldospowerindex=2.0;
+    PetscPrintf(PETSC_COMM_WORLD,"---------ldospowerindex is %g \n",ldospowerindex);
+    THGdataGroup thgdata={epsSReal,epsFReal,M1,x1,weightedJ1,b1,ej,epsI,epspmlQ1,epsmedium1,epscoef1,omega1,M2,epsII,epspmlQ2,epsmedium2,epscoef2,omega2,ksp1,ksp2,ldospowerindex,outputbase};
+
+    if (minapproach)
+      nlopt_set_min_objective(opt,thgfom,&thgdata);
+    else
+      nlopt_set_max_objective(opt,thgfom,&thgdata);
   }
 
   result = nlopt_optimize(opt,epsopt,&maxf);			//********************optimization here!********************//
@@ -796,9 +807,16 @@ if (Job==3){
 	if(!flg) ldospowerindex=2.0;
 	PetscPrintf(PETSC_COMM_WORLD,"---------ldospowerindex is %g \n",ldospowerindex);
 	beta = FOM(DegFree,epsopt,grad,NULL);}
-      else{
-	beta = optfocalpt(DegFree,epsopt,grad,&lensdata);
-      }
+      else if (optjob==6){
+	beta = optfocalpt(DegFree,epsopt,grad,&lensdata);}
+      else if (optjob==7){
+	PetscOptionsGetReal(PETSC_NULL,"-ldospowerindex",&ldospowerindex,&flg);
+	if(!flg) ldospowerindex=2.0;
+	PetscPrintf(PETSC_COMM_WORLD,"---------ldospowerindex is %g \n",ldospowerindex);
+	THGdataGroup thgdata={epsSReal,epsFReal,M1,x1,weightedJ1,b1,ej,epsI,epspmlQ1,epsmedium1,epscoef1,omega1,M2,epsII,epspmlQ2,epsmedium2,epscoef2,omega2,ksp1,ksp2,ldospowerindex,outputbase};
+
+	beta = thgfom(DegFree,epsopt,grad,&thgdata);}
+      
       PetscPrintf(PETSC_COMM_WORLD,"epscen: %g objfunc: %g objfunc-grad: %g \n", epsopt[posMj], beta, grad[posMj]);
   }
 
