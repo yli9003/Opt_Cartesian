@@ -19,6 +19,31 @@ typedef struct{
 } LDOSdataGroup;
 
 typedef struct{
+  Vec epsSReal;
+  Vec epsFReal;
+  Mat M1;
+  Vec x1;
+  Vec weightedJ1;
+  Vec b1;
+  Vec ej;
+  Vec epsI;
+  Vec epspmlQ1;
+  Vec epsmedium1;
+  Vec epscoef1;
+  double omega1;
+  Mat M3;
+  Vec epsIII;
+  Vec epspmlQ3;
+  Vec epsmedium3;
+  Vec epscoef3;
+  double omega3;
+  KSP ksp1;
+  KSP ksp2;
+  double ldospowerindex;
+  int outputbase;
+} THGdataGroup;
+
+typedef struct{
   int Nx;
   int Ny;
   int Nz;
@@ -177,3 +202,6 @@ PetscErrorCode MakeVecFocalpt(Vec VecFocalpt, int Nx, int Ny, int Nz, int ix, in
 
 // from eigsolver.c
 int eigsolver(Mat M, Vec epsC, Mat D);
+
+// from thgfom.c
+double thgfom(int DegFree,double *epsopt, double *grad, void *data);

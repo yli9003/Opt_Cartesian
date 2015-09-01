@@ -1,4 +1,4 @@
-all: MoperatorGeneral.o MoperatorGeneralBloch_XdL.o SourceGeneration.o PML.o Eps.o MathTools.o MatVecMaker.o Output.o mympisetup.o ldos.o projsimpoverlap.o singleldos.o ldosonly.o filters.o alpha.o FOM.o ldosconstraint.o lens.o eigsolver.o
+all: MoperatorGeneral.o MoperatorGeneralBloch_XdL.o SourceGeneration.o PML.o Eps.o MathTools.o MatVecMaker.o Output.o mympisetup.o ldos.o projsimpoverlap.o singleldos.o ldosonly.o filters.o alpha.o FOM.o ldosconstraint.o lens.o eigsolver.o thgfom.o
 
 export PETSC_DIR=/home/zlin/MyLocal/petsc-3.6.0
 export PETSC_ARCH=arch-opt
@@ -7,7 +7,7 @@ export SLEPC_DIR=/home/zlin/MyLocal/slepc-3.6.0
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 include ${SLEPC_DIR}/lib/slepc/conf/slepc_common
-CLEANFILES =  MoperatorGeneral.o MoperatorGeneralBloch_XdL.o SourceGeneration.o PML.o Eps.o MathTools.o MatVecMaker.o Output.o mympisetup.o ldos.o projsimpoverlap.o singleldos.o ldosonly.o filters.o alpha.o FOM.o ldosconstraint.o lens.o eigsolver.o
+CLEANFILES =  MoperatorGeneral.o MoperatorGeneralBloch_XdL.o SourceGeneration.o PML.o Eps.o MathTools.o MatVecMaker.o Output.o mympisetup.o ldos.o projsimpoverlap.o singleldos.o ldosonly.o filters.o alpha.o FOM.o ldosconstraint.o lens.o eigsolver.o thgfom.o
 
 MoperatorGeneral: MoperatorGeneral.o
 	$(CLINKER) -Wall -g -o $@ MoperatorGeneral.o  
@@ -47,3 +47,5 @@ lens:lens.o
 	$(CLINKER) -Wall -g -o $@ lens.o
 eigsolver:eigsolver.o
 	$(CLINKER) -Wall -g -o $@ eigsolver.o
+thgfom:thgfom.o
+	$(CLINKER) -Wall -g -o $@ thgfom.o
