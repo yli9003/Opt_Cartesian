@@ -18,6 +18,12 @@ VecScatter scatter;
 extern char filenameComm[PETSC_MAX_PATH_LEN];
 extern int outputbase;
 
+extern int pSIMP;
+extern double bproj, etaproj;
+extern Mat Hfilt;
+extern KSP kspH;
+extern int itsH;
+
 #undef __FUNCT__ 
 #define __FUNCT__ "ldosconstraint"
 double ldosconstraint(int DegFreeAll,double *epsoptAll, double *gradAll, void *data)
@@ -55,8 +61,12 @@ double ldosconstraint(int DegFreeAll,double *epsoptAll, double *gradAll, void *d
   VecDuplicate(x,&Grad);
 
   // copy epsoptAll to epsSReal, fills the first DegFree elements;
-  ierr=ArrayToVec(epsoptAll, epsSReal); CHKERRQ(ierr);
+  //ierr=ArrayToVec(epsoptAll, epsSReal); CHKERRQ(ierr);
   
+  Vec epsgrad;
+  VecDuplicate(epsSReal,&epsgrad);
+  RegzProj(DegFree,epsoptAll,epsSReal,epsgrad,pSIMP,bproj,etaproj,kspH,Hfilt,&itsH);
+
   // Update the diagonals of M;
   MatDuplicate(M,MAT_COPY_VALUES,&tmpM);
   VecSet(epsP,0.0);
@@ -83,7 +93,11 @@ double ldosconstraint(int DegFreeAll,double *epsoptAll, double *gradAll, void *d
   ierr = VecPointwiseMult(Grad,Grad,vR); CHKERRQ(ierr);
 
   ierr = MatMultTranspose(A,Grad,vgrad);CHKERRQ(ierr);
-  ierr = VecToArray(vgrad,gradAll,scatter,from,to,vgradlocal,DegFree);
+
+  ierr=VecPointwiseMult(vgrad,vgrad,epsgrad); CHKERRQ(ierr);
+  KSPSolveTranspose(kspH,vgrad,epsgrad);
+
+  ierr = VecToArray(epsgrad,gradAll,scatter,from,to,vgradlocal,DegFree);
 
   gradAll[DegFreeAll-1]=1;
 
@@ -96,6 +110,7 @@ double ldosconstraint(int DegFreeAll,double *epsoptAll, double *gradAll, void *d
   VecDestroy(&epsP);
   VecDestroy(&tmp);
   VecDestroy(&Grad);
+  VecDestroy(&epsgrad);
 
   return epsoptAll[DegFreeAll-1]-ldos;
 }
