@@ -439,7 +439,7 @@ int main(int argc, char **argv)
 
   /*--------Setup Helmholtz filter---------*/
   PC pcH;
-  GetH(PETSC_COMM_WORLD,&Hfilt,Mx,My,1,sH,nR,dimH,&kspH,&pcH);
+  GetH(PETSC_COMM_WORLD,&Hfilt,Mx,My,(Mzslab==0)?Mz:1,sH,nR,dimH,&kspH,&pcH);
   //OutputMat(PETSC_COMM_WORLD, Hfilt, filenameComm,"Hfilt.m");
   ierr = PetscPrintf(PETSC_COMM_WORLD,"--------Setting up the Hfilt DONE!--------\n ");CHKERRQ(ierr);
   /*--------Setup Helmholtz filter DONE---------*/
