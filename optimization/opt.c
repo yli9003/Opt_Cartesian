@@ -223,6 +223,9 @@ int main(int argc, char **argv)
 
   /*------Set up the A, B, C, D matrices--------------*/
   myinterp(PETSC_COMM_WORLD, &A, Nx,Ny,Nz, LowerPML*floor((Nx-Mx)/2),LowerPML*floor((Ny-My)/2),LowerPML*floor((Nz-Mz)/2), Mx,My,Mz,Mzslab, anisotropicDOF);
+  int Arows, Acols;
+  MatGetSize(A,&Arows,&Acols);
+  PetscPrintf(PETSC_COMM_WORLD,"****Dimensions of A is %d by %d \n",Arows,Acols);
   GetDotMat(PETSC_COMM_WORLD, &B, Nx, Ny, Nz);
   CongMat(PETSC_COMM_WORLD, &C, 6*Nxyz);
   ImagIMat(PETSC_COMM_WORLD, &D,6*Nxyz);
@@ -455,7 +458,7 @@ int main(int argc, char **argv)
 
   /*--------Setup Helmholtz filter---------*/
   PC pcH;
-  GetH(PETSC_COMM_WORLD,&Hfilt,Mx,My,1,sH,nR,dimH,&kspH,&pcH);
+  GetH(PETSC_COMM_WORLD,&Hfilt,Mx,My,(Mzslab==0)?Mz:1,sH,nR,dimH,&kspH,&pcH);
   //OutputMat(PETSC_COMM_WORLD, Hfilt, filenameComm,"Hfilt.m");
   ierr = PetscPrintf(PETSC_COMM_WORLD,"--------Setting up the Hfilt DONE!--------\n ");CHKERRQ(ierr);
   /*--------Setup Helmholtz filter DONE---------*/
