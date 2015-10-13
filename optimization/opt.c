@@ -512,10 +512,11 @@ int main(int argc, char **argv)
   	OutputVec(PETSC_COMM_WORLD, epsFReal, "initial_","epsF.m");
 /*-------------------------------------------------------------------------*/
 
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"--------We proceed to Job.--------\n ");CHKERRQ(ierr);
 
   int Job;
-  PetscOptionsGetInt(PETSC_NULL,"-Job",&Job,&flg); MyCheckAndOutputInt(flg,Job,"Job","Job (1 direct obj [SHG, singleldos, alpha, FOM, lens] ; 2 minimax ; 3 gradient check [SHG, singleldos, alpha, ldosconstr, FOM, lens])");
-
+  PetscOptionsGetInt(PETSC_NULL,"-Job",&Job,&flg); MyCheckAndOutputInt(flg,Job,"Job","Job (1 direct obj [SHG, singleldos, alpha, FOM, lens] ; 2 minimax ; 3 gradient check [SHG, singleldos, alpha, ldosconstr, FOM, lens])"); 
+  
   LDOSdataGroup ldos1data = {omega1, M1, A, x1, b1, weightedJ1, epspmlQ1, epsmedium1, epsI,  &its1, epscoef1, vgrad, ksp1};
     
   /*========for lens optimization=======*/
@@ -642,21 +643,21 @@ if (Job==1){
  
   }
   else if (optjob==5){
-    nlopt_set_max_objective(opt,optfocalpt,&lensdata);
-  }
-  else if (optjob==6){
     PetscOptionsGetReal(PETSC_NULL,"-ldospowerindex",&ldospowerindex,&flg);
     if(!flg) ldospowerindex=2.0;
     PetscPrintf(PETSC_COMM_WORLD,"---------ldospowerindex is %g \n",ldospowerindex);
-    THGdataGroup thgdata={epsSReal,epsFReal,M1,x1,weightedJ1,b1,ej,epsI,epspmlQ1,epsmedium1,epscoef1,omega1,M2,epsII,epspmlQ2,epsmedium2,epscoef2,omega2,ksp1,ksp2,ldospowerindex,outputbase};
 
-    if (minapproach)
-      nlopt_set_min_objective(opt,thgfom,&thgdata);
-    else
-      nlopt_set_max_objective(opt,thgfom,&thgdata);
+    THGdataGroup thgdata={epsSReal,epsFReal,M1,x1,weightedJ1,b1,ej,epsI,epspmlQ1,epsmedium1,epscoef1,omega1,M2,epsII,epspmlQ2,epsmedium2,epscoef2,omega2,ksp1,ksp2,ldospowerindex,outputbase};
+    PetscPrintf(PETSC_COMM_WORLD,"---------About to embark THG optimization. No minimum approach %d ....\n", minapproach);
+    thgfom(DegFree,epsopt,grad,&thgdata);
+    nlopt_set_max_objective(opt,thgfom,&thgdata);
+  }
+  else if (optjob==6){
+    nlopt_set_max_objective(opt,optfocalpt,&lensdata);
   }
 
-  result = nlopt_optimize(opt,epsopt,&maxf);			//********************optimization here!********************//
+  PetscPrintf(PETSC_COMM_WORLD,"---------Optimization about to occur. \n");
+  result = nlopt_optimize(opt,epsopt,&maxf);    //********************optimization here!********************//
 
   if (result < 0) 
     PetscPrintf(PETSC_COMM_WORLD,"nlopt failed! \n", result);
@@ -1033,7 +1034,85 @@ if (Job==4){
 
 }
 
+ if (Job==5){
 
+   PetscPrintf(PETSC_COMM_WORLD,"-----------Begin setting up the optimization problem for THG.-----\n");
+
+   /*---------Optimization--------*/
+   double mylb=0, myub=1.0, *lb=NULL, *ub=NULL;
+   int maxeval, maxtime, mynloptalg;
+   double maxf;
+   nlopt_opt  opt;
+   int mynloptlocalalg;
+   nlopt_opt local_opt;
+   nlopt_result result;
+
+   PetscOptionsGetInt(PETSC_NULL,"-maxeval",&maxeval,&flg);  MyCheckAndOutputInt(flg,maxeval,"maxeval","max number of evaluation");
+   PetscOptionsGetInt(PETSC_NULL,"-maxtime",&maxtime,&flg);  MyCheckAndOutputInt(flg,maxtime,"maxtime","max time of evaluation");
+   PetscOptionsGetInt(PETSC_NULL,"-mynloptalg",&mynloptalg,&flg);  MyCheckAndOutputInt(flg,mynloptalg,"mynloptalg","The algorithm used ");
+   PetscOptionsGetInt(PETSC_NULL,"-mynloptlocalalg",&mynloptlocalalg,&flg);  MyCheckAndOutputInt(flg,mynloptlocalalg,"mynloptlocalalg","The local optimization algorithm used ");
+
+   lb = (double *) malloc(DegFree*sizeof(double));
+   ub = (double *) malloc(DegFree*sizeof(double));
+   for(i=0;i<DegFree;i++)
+     {
+       lb[i] = mylb;
+       ub[i] = myub;
+     }
+
+
+   opt = nlopt_create(mynloptalg, DegFree);
+   nlopt_set_lower_bounds(opt,lb);
+   nlopt_set_upper_bounds(opt,ub);
+   nlopt_set_maxeval(opt,maxeval);
+   nlopt_set_maxtime(opt,maxtime);
+   if (mynloptalg==11) nlopt_set_vector_storage(opt,4000);
+   if (mynloptlocalalg)
+     {
+       PetscPrintf(PETSC_COMM_WORLD,"-----------Running with a local optimizer.---------\n");
+       local_opt=nlopt_create(mynloptlocalalg,DegFree);
+       nlopt_set_ftol_rel(local_opt, 1e-14);
+       nlopt_set_maxeval(local_opt,100000);
+       nlopt_set_local_optimizer(opt,local_opt);
+     }
+
+   PetscOptionsGetReal(PETSC_NULL,"-ldospowerindex",&ldospowerindex,&flg);
+   if(!flg) ldospowerindex=2.0;
+   PetscPrintf(PETSC_COMM_WORLD,"---------ldospowerindex is %g \n",ldospowerindex);
+
+   THGdataGroup thgdata={epsSReal,epsFReal,M1,x1,weightedJ1,b1,ej,epsI,epspmlQ1,epsmedium1,epscoef1,omega1,M2,epsII,epspmlQ2,epsmedium2,epscoef2,omega2,ksp1,ksp2,ldospowerindex,outputbase};
+   PetscPrintf(PETSC_COMM_WORLD,"---------About to embark THG optimization. No minimum approach %d ....\n", minapproach);
+   thgfom(DegFree,epsopt,grad,&thgdata);
+   nlopt_set_max_objective(opt,thgfom,&thgdata);
+   
+   PetscPrintf(PETSC_COMM_WORLD,"---------Optimization about to occur. \n");
+   result = nlopt_optimize(opt,epsopt,&maxf);    //********************optimization here!********************//
+
+   if (result < 0)
+     PetscPrintf(PETSC_COMM_WORLD,"nlopt failed! \n", result);
+   else
+     PetscPrintf(PETSC_COMM_WORLD,"found extremum  %0.16e\n", minapproach?1.0/maxf:maxf);
+
+   PetscPrintf(PETSC_COMM_WORLD,"nlopt returned value is %d \n", result);
+
+   free(lb);
+   free(ub);
+   nlopt_destroy(opt);
+
+   int rankA;
+   MPI_Comm_rank(PETSC_COMM_WORLD, &rankA);
+
+   if(rankA==0)
+     {
+       ptf = fopen(strcat(filenameComm,"epsopt.txt"),"w");
+       for (i=0;i<DegFree;i++)
+	 fprintf(ptf,"%0.16e \n",epsopt[i]);
+       fclose(ptf);
+     }
+
+ }
+
+ 
 /*------------------------------------------------*/
 /*------------------------------------------------*/
 /*------------------------------------------------*/
