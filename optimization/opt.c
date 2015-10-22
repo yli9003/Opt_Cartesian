@@ -1054,12 +1054,31 @@ if (Job==4){
 
    lb = (double *) malloc(DegFree*sizeof(double));
    ub = (double *) malloc(DegFree*sizeof(double));
-   for(i=0;i<DegFree;i++)
-     {
-       lb[i] = mylb;
-       ub[i] = myub;
-     }
-
+   if(!readlubsfromfile) {
+     for(i=0;i<DegFree;i++)
+       {
+	 lb[i] = mylb;
+	 ub[i] = myub;
+       }
+   }else {
+     char lbfile[PETSC_MAX_PATH_LEN], ubfile[PETSC_MAX_PATH_LEN];
+     PetscOptionsGetString(PETSC_NULL,"-lbfile",lbfile,PETSC_MAX_PATH_LEN,&flg); MyCheckAndOutputChar(flg,lbfile,"lbfile","Lower-bound file");
+     PetscOptionsGetString(PETSC_NULL,"-ubfile",ubfile,PETSC_MAX_PATH_LEN,&flg); MyCheckAndOutputChar(flg,ubfile,"ubfile","Upper-bound file");
+     ptf = fopen(lbfile,"r");
+     for (i=0;i<DegFree;i++)
+       { 
+	 fscanf(ptf,"%lf",&lb[i]);
+       }
+     fclose(ptf);
+     
+     ptf = fopen(ubfile,"r");
+     for (i=0;i<DegFree;i++)
+       { 
+	 fscanf(ptf,"%lf",&ub[i]);
+       }
+     fclose(ptf);
+     
+   }
 
    opt = nlopt_create(mynloptalg, DegFree);
    nlopt_set_lower_bounds(opt,lb);
