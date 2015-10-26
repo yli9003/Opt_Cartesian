@@ -212,6 +212,9 @@ int main(int argc, char **argv)
   ierr=VecAXPY(epsFReal,1.0,epsmedium); CHKERRQ(ierr);								
   ierr=VecPointwiseMult(epsFReal,epsFReal,epspmlQ); CHKERRQ(ierr);
 
+  OutputVec(PETSC_COMM_WORLD, epsFReal, "epsF",".m");
+  OutputVec(PETSC_COMM_WORLD, epsmedium, "epsmed",".m");
+  
   eigsolver(M,epsFReal,D);
 /*-------------------------------------------------------------------------*/
 
