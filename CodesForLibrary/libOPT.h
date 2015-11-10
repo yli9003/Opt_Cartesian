@@ -178,3 +178,6 @@ double maxminobjfun(int DegFreeAll,double *epsoptAll, double *gradAll, void *dat
 double optfocalpt(int DegFree, double *epsopt, double *grad, void *data);
 
 PetscErrorCode MakeVecFocalpt(Vec VecFocalpt, int Nx, int Ny, int Nz, int ix, int iy, int iz, int ic1, int ic2);
+
+// from c4v.c
+PetscErrorCode c4v(MPI_Comm comm, Mat *Aout, int M);
