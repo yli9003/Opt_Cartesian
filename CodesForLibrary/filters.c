@@ -265,6 +265,26 @@ PetscErrorCode RegzProj(int DegFree, double *epsopt,Vec epsSReal,Vec epsgrad,int
   epsoptH=(double *) malloc(DegFree*sizeof(double));
   ierr=ArrayToVec(epsopt,epsVec); CHKERRQ(ierr);
   SolveMatrix(PETSC_COMM_WORLD,kspH,Hfilt,epsVec,epsH,itsH);
+  PetscPrintf(PETSC_COMM_WORLD,"*****DEBUG: I am here!******************\n");
+  ierr = VecToArray(epsH,epsoptH,scatter,from,to,vgradlocal,DegFree);
+  applyfiltersVer2(DegFree,epsoptH,epsSReal,epsgrad,pSIMP,bproj,etaproj);
+  VecDestroy(&epsVec);
+  VecDestroy(&epsH);
+  free(epsoptH);
+ 
+  PetscFunctionReturn(ierr);
+}
+
+PetscErrorCode RegzProjnoH(int DegFree, double *epsopt,Vec epsSReal,Vec epsgrad,int pSIMP,double bproj,double etaproj)
+{
+  PetscErrorCode ierr; 
+  Vec epsVec, epsH;
+  double *epsoptH; 
+  ierr=VecDuplicate(epsSReal,&epsVec); CHKERRQ(ierr);
+  ierr=VecDuplicate(epsSReal,&epsH); CHKERRQ(ierr);
+  epsoptH=(double *) malloc(DegFree*sizeof(double));
+  ierr=ArrayToVec(epsopt,epsVec); CHKERRQ(ierr);
+  VecCopy(epsVec,epsH);
   ierr = VecToArray(epsH,epsoptH,scatter,from,to,vgradlocal,DegFree);
   applyfiltersVer2(DegFree,epsoptH,epsSReal,epsgrad,pSIMP,bproj,etaproj);
   VecDestroy(&epsVec);

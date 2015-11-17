@@ -1,4 +1,5 @@
 #! /bin/bash
+rm -rf libOPT.a *.o
 make clean
 make
 ar rcs libOPT.a *.o

@@ -41,6 +41,25 @@ typedef struct{
   Mat Diff;
 } LensGroup;
 
+typedef struct{
+  double omega;
+  Mat M;
+  Mat A;
+  Vec x;
+  Vec b;
+  Vec weightedJ;
+  Vec epspmlQ;
+  Vec epsmedium;
+  Vec epsDiff;
+  int *its;
+  Vec epscoef;
+  Vec vgrad;
+  KSP ksp;
+  int constr;
+  double normalpha;
+  double normbeta;
+} EPdataGroup;
+
 // from MoperatorGeneral.c
 PetscErrorCode MoperatorGeneral(MPI_Comm comm, Mat *Mout, int Nx, int Ny, int Nz, double hx, double hy, double hz, int bx[2], int by[2], int bz[2], double *muinv,int DimPeriod);
 
@@ -163,6 +182,8 @@ PetscErrorCode SolveH(MPI_Comm comm, KSP ksp, Mat H, Vec rhs, Vec sol);
 
 PetscErrorCode RegzProj(int DegFree, double *epsopt,Vec epsSReal,Vec epsgrad,int pSIMP,double bproj,double etaproj,KSP kspH,Mat Hfilt,int *itsH);
 
+PetscErrorCode RegzProjnoH(int DegFree, double *epsopt,Vec epsSReal,Vec epsgrad,int pSIMP,double bproj,double etaproj);
+
 // from alpha.c
 double alpha(int DegFree,double *epsopt, double *grad, void *data);
 
@@ -181,3 +202,8 @@ PetscErrorCode MakeVecFocalpt(Vec VecFocalpt, int Nx, int Ny, int Nz, int ix, in
 
 // from c4v.c
 PetscErrorCode c4v(MPI_Comm comm, Mat *Aout, int M);
+
+// from EP.c
+double EPSOF(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
+
+double EPLDOS(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
