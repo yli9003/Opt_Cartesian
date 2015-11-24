@@ -218,11 +218,15 @@ int main(int argc, char **argv)
   PetscOptionsGetReal(PETSC_NULL,"-nR",&nR,&flg); MyCheckAndOutputDouble(flg,nR,"nR","nR");
   PetscOptionsGetInt(PETSC_NULL,"-dimH",&dimH,&flg); MyCheckAndOutputDouble(flg,dimH,"dimH","dimH");
 
-  int constr;
-  double normalpha, normbeta;
-  PetscOptionsGetReal(PETSC_NULL,"-constr",&constr,&flg); MyCheckAndOutputDouble(flg,constr,"constr","constr");
-  PetscOptionsGetReal(PETSC_NULL,"-normalpha",&normalpha,&flg); MyCheckAndOutputDouble(flg,normalpha,"normalpha","normalpha");
-  PetscOptionsGetReal(PETSC_NULL,"-normbeta",&normbeta,&flg); MyCheckAndOutputDouble(flg,normbeta,"normbeta","normbeta");
+  int constrldos,constrsof;
+  double normldos, normsof;
+  PetscOptionsGetInt(PETSC_NULL,"-constrldos",&constrldos,&flg); MyCheckAndOutputInt(flg,constrldos,"constrldos","constrldos");
+  PetscOptionsGetInt(PETSC_NULL,"-constrsof",&constrsof,&flg); MyCheckAndOutputInt(flg,constrsof,"constrsof","constrsof");
+  PetscOptionsGetReal(PETSC_NULL,"-normldos",&normldos,&flg); MyCheckAndOutputDouble(flg,normldos,"normldos","normldos");
+  PetscOptionsGetReal(PETSC_NULL,"-normsof",&normsof,&flg); MyCheckAndOutputDouble(flg,normsof,"normsof","normsof");
+
+  int minormax;
+  PetscOptionsGetInt(PETSC_NULL,"-minormax",&minormax,&flg); MyCheckAndOutputInt(flg,minormax,"minormax","minormax");
   
 
 /**************************************************************************************************************************************************************/
@@ -566,7 +570,7 @@ int main(int argc, char **argv)
 
 /*-------------------------------------------------------------------------*/
 
-  EPdataGroup freq1data={omega1,M1,A,x1,b1,weightedJ1,epspmlQ1,epsmedium1,epsI,&its1,epscoef1,vgrad,ksp1,constr,normalpha,normbeta};
+  EPdataGroup freq1data={omega1,M1,A,x1,b1,weightedJ1,epspmlQ1,epsmedium1,epsI,&its1,epscoef1,vgrad,ksp1,constrldos,normldos};
 
   int Job;
   PetscOptionsGetInt(PETSC_NULL,"-Job",&Job,&flg); MyCheckAndOutputInt(flg,Job,"Job","Job (1 gradient check [SOF, LDOS] ; 2 optimization)");
@@ -719,9 +723,14 @@ if (Job==2){
   MatMult(D,J4,b4);
   VecScale(b4,omega);
 
-  EPdataGroup freq2data={omega,M2,A,x2,b2,weightedJ2,epspmlQ,epsmedium,epsDiff,&its2,epscoef,vgrad,ksp2,constr,normalpha,normbeta};
-  EPdataGroup freq3data={omega,M3,A,x3,b3,weightedJ3,epspmlQ,epsmedium,epsDiff,&its3,epscoef,vgrad,ksp3,constr,normalpha,normbeta};
-  EPdataGroup freq4data={omega,M4,A,x4,b4,weightedJ4,epspmlQ,epsmedium,epsDiff,&its4,epscoef,vgrad,ksp4,constr,normalpha,normbeta};
+  EPdataGroup freq1dataldos={omega,M1,A,x1,b1,weightedJ1,epspmlQ,epsmedium,epsDiff,&its1,epscoef,vgrad,ksp1,constrldos,normldos};
+  EPdataGroup freq2dataldos={omega,M2,A,x2,b2,weightedJ2,epspmlQ,epsmedium,epsDiff,&its2,epscoef,vgrad,ksp2,constrldos,normldos};
+  EPdataGroup freq3dataldos={omega,M3,A,x3,b3,weightedJ3,epspmlQ,epsmedium,epsDiff,&its3,epscoef,vgrad,ksp3,constrldos,normldos};
+  EPdataGroup freq4dataldos={omega,M4,A,x4,b4,weightedJ4,epspmlQ,epsmedium,epsDiff,&its4,epscoef,vgrad,ksp4,constrldos,normldos};
+  EPdataGroup freq1datasof={omega,M1,A,x1,b1,weightedJ1,epspmlQ,epsmedium,epsDiff,&its1,epscoef,vgrad,ksp1,constrsof,normsof};
+  EPdataGroup freq2datasof={omega,M2,A,x2,b2,weightedJ2,epspmlQ,epsmedium,epsDiff,&its2,epscoef,vgrad,ksp2,constrsof,normsof};
+  EPdataGroup freq3datasof={omega,M3,A,x3,b3,weightedJ3,epspmlQ,epsmedium,epsDiff,&its3,epscoef,vgrad,ksp3,constrsof,normsof};
+  EPdataGroup freq4datasof={omega,M4,A,x4,b4,weightedJ4,epspmlQ,epsmedium,epsDiff,&its4,epscoef,vgrad,ksp4,constrsof,normsof};
 
  /*---------Optimization--------*/
   double tstart;
@@ -802,30 +811,60 @@ if (Job==2){
   int nummodes;
   PetscOptionsGetInt(PETSC_NULL,"-nummodes",&nummodes,&flg);  MyCheckAndOutputInt(flg,nummodes,"nummodes","number of degenerate modes (2, 3 or 4) to collapse");
 
-  if(nummodes==2){
-    nlopt_add_inequality_constraint(opt,EPLDOS,&freq1data,1e-8);
-    nlopt_add_inequality_constraint(opt,EPSOF,&freq1data,1e-8);
-    nlopt_add_inequality_constraint(opt,EPLDOS,&freq2data,1e-8);
-    nlopt_add_inequality_constraint(opt,EPSOF,&freq2data,1e-8);
-  }else if(nummodes==3){
-    nlopt_add_inequality_constraint(opt,EPLDOS,&freq1data,1e-8);
-    nlopt_add_inequality_constraint(opt,EPSOF,&freq1data,1e-8);
-    nlopt_add_inequality_constraint(opt,EPLDOS,&freq2data,1e-8);
-    nlopt_add_inequality_constraint(opt,EPSOF,&freq2data,1e-8);
-    nlopt_add_inequality_constraint(opt,EPLDOS,&freq3data,1e-8);
-    nlopt_add_inequality_constraint(opt,EPSOF,&freq3data,1e-8);
-  }else if(nummodes==4){
-    nlopt_add_inequality_constraint(opt,EPLDOS,&freq1data,1e-8);
-    nlopt_add_inequality_constraint(opt,EPSOF,&freq1data,1e-8);
-    nlopt_add_inequality_constraint(opt,EPLDOS,&freq2data,1e-8);
-    nlopt_add_inequality_constraint(opt,EPSOF,&freq2data,1e-8);
-    nlopt_add_inequality_constraint(opt,EPLDOS,&freq3data,1e-8);
-    nlopt_add_inequality_constraint(opt,EPSOF,&freq3data,1e-8);
-    nlopt_add_inequality_constraint(opt,EPLDOS,&freq4data,1e-8);
-    nlopt_add_inequality_constraint(opt,EPSOF,&freq4data,1e-8);
+  if(nummodes==220){
+    nlopt_add_inequality_constraint(opt,EPLDOS,&freq1dataldos,1e-8);
+    nlopt_add_inequality_constraint(opt,EPLDOS,&freq2dataldos,1e-8);
+  }else if(nummodes==330){
+    nlopt_add_inequality_constraint(opt,EPLDOS,&freq1dataldos,1e-8);
+    nlopt_add_inequality_constraint(opt,EPLDOS,&freq2dataldos,1e-8);
+    nlopt_add_inequality_constraint(opt,EPLDOS,&freq3dataldos,1e-8);
+  }else if(nummodes==440){
+    nlopt_add_inequality_constraint(opt,EPLDOS,&freq1dataldos,1e-8);
+    nlopt_add_inequality_constraint(opt,EPLDOS,&freq2dataldos,1e-8);
+    nlopt_add_inequality_constraint(opt,EPLDOS,&freq3dataldos,1e-8);
+    nlopt_add_inequality_constraint(opt,EPLDOS,&freq4dataldos,1e-8);
+  }else if(nummodes==202){
+    nlopt_add_inequality_constraint(opt,EPSOF,&freq1datasof,1e-8);
+    nlopt_add_inequality_constraint(opt,EPSOF,&freq2datasof,1e-8);
+  }else if(nummodes==303){
+    nlopt_add_inequality_constraint(opt,EPSOF,&freq1datasof,1e-8);
+    nlopt_add_inequality_constraint(opt,EPSOF,&freq2datasof,1e-8);
+    nlopt_add_inequality_constraint(opt,EPSOF,&freq3datasof,1e-8);
+  }else if(nummodes==404){
+    nlopt_add_inequality_constraint(opt,EPSOF,&freq1datasof,1e-8);
+    nlopt_add_inequality_constraint(opt,EPSOF,&freq2datasof,1e-8);
+    nlopt_add_inequality_constraint(opt,EPSOF,&freq3datasof,1e-8);
+    nlopt_add_inequality_constraint(opt,EPSOF,&freq4datasof,1e-8);
+  }else if(nummodes==222){
+    nlopt_add_inequality_constraint(opt,EPLDOS,&freq1dataldos,1e-8);
+    nlopt_add_inequality_constraint(opt,EPSOF,&freq1datasof,1e-8);
+    nlopt_add_inequality_constraint(opt,EPLDOS,&freq2dataldos,1e-8);
+    nlopt_add_inequality_constraint(opt,EPSOF,&freq2datasof,1e-8);
+  }else if(nummodes==333){
+    nlopt_add_inequality_constraint(opt,EPLDOS,&freq1dataldos,1e-8);
+    nlopt_add_inequality_constraint(opt,EPSOF,&freq1datasof,1e-8);
+    nlopt_add_inequality_constraint(opt,EPLDOS,&freq2dataldos,1e-8);
+    nlopt_add_inequality_constraint(opt,EPSOF,&freq2datasof,1e-8);
+    nlopt_add_inequality_constraint(opt,EPLDOS,&freq3dataldos,1e-8);
+    nlopt_add_inequality_constraint(opt,EPSOF,&freq3datasof,1e-8);
+  }else if(nummodes==444){
+    nlopt_add_inequality_constraint(opt,EPLDOS,&freq1dataldos,1e-8);
+    nlopt_add_inequality_constraint(opt,EPSOF,&freq1datasof,1e-8);
+    nlopt_add_inequality_constraint(opt,EPLDOS,&freq2dataldos,1e-8);
+    nlopt_add_inequality_constraint(opt,EPSOF,&freq2datasof,1e-8);
+    nlopt_add_inequality_constraint(opt,EPLDOS,&freq3dataldos,1e-8);
+    nlopt_add_inequality_constraint(opt,EPSOF,&freq3datasof,1e-8);
+    nlopt_add_inequality_constraint(opt,EPLDOS,&freq4dataldos,1e-8);
+    nlopt_add_inequality_constraint(opt,EPSOF,&freq4datasof,1e-8);
+  }else{
+    PetscPrintf(PETSC_COMM_WORLD,"!!!ERROR: Supply a correct value for nummodes (220,202,222,330,303,333,440,404,444)\n");
   }
 
-  nlopt_set_max_objective(opt,maxminobjfun,NULL);   
+  if(minormax==0){
+    nlopt_set_min_objective(opt,maxminobjfun,NULL);   
+  }else{
+    nlopt_set_max_objective(opt,maxminobjfun,NULL);   
+  }
 
   result = nlopt_optimize(opt,epsoptAll,&maxf);
 

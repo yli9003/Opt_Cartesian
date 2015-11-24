@@ -24,6 +24,11 @@ extern Mat Hfilt;
 extern KSP kspH;
 extern int itsH;
 
+//options constr 0, 1 or 2
+//LDOS: 0 -> bare ldos, 1 -> a*t - ldos, 2 -> a - ldos
+//SOF: 0 -> bare sof, 1 -> sof - b/t, 2 -> sof - b*t
+//use constr 2 for SOF minimax
+
 #undef __FUNCT__ 
 #define __FUNCT__ "EPSOF"
 double EPSOF(int DegFreeAll,double *epsoptAll, double *gradAll, void *data)
@@ -48,7 +53,7 @@ double EPSOF(int DegFreeAll,double *epsoptAll, double *gradAll, void *data)
   Vec    vgrad = ptdata->vgrad;
   KSP    ksp = ptdata->ksp;
   int    constr=ptdata->constr;
-  double normbeta = ptdata->normbeta;
+  double multipurposescalar = ptdata->multipurposescalar;
 
   //declare temporary variables
   Vec epsC, epsCi, epsP, tmp, xconj, Grad;
@@ -105,8 +110,11 @@ double EPSOF(int DegFreeAll,double *epsoptAll, double *gradAll, void *data)
 
     ierr = VecToArray(epsgrad,gradAll,scatter,from,to,vgradlocal,DegFree);
 
-    if(constr) gradAll[DegFree]=normbeta/(epsoptAll[DegFree]*epsoptAll[DegFree]);
-
+    if(constr==1){
+      gradAll[DegFree]=multipurposescalar/(epsoptAll[DegFree]*epsoptAll[DegFree]);
+    }else if(constr==2){
+      gradAll[DegFree]=multipurposescalar;
+    }
   }
 
 
@@ -120,11 +128,15 @@ double EPSOF(int DegFreeAll,double *epsoptAll, double *gradAll, void *data)
   VecDestroy(&epsgrad);
   VecDestroy(&xconj);
 
-  if(!constr){
-    return SOF;
-  }else{
-    return SOF - normbeta/epsoptAll[DegFree];
+  double output=0;
+  if(constr==0){
+    output=SOF;
+  }else if(constr==1){
+    output=SOF - multipurposescalar/epsoptAll[DegFree];
+  }else if(constr==2){
+    output=SOF - multipurposescalar*epsoptAll[DegFree];
   }
+  return output;
 }
 
 #undef __FUNCT__ 
@@ -152,7 +164,7 @@ double EPLDOS(int DegFreeAll,double *epsoptAll, double *gradAll, void *data)
   Vec    vgrad = ptdata->vgrad;
   KSP    ksp = ptdata->ksp;
   int    constr=ptdata->constr;
-  double normalpha = ptdata->normalpha;
+  double multipurposescalar = ptdata->multipurposescalar;
 
   //declare temporary variables
   Vec epsC, epsCi, epsP, tmp, Grad;
@@ -203,8 +215,11 @@ double EPLDOS(int DegFreeAll,double *epsoptAll, double *gradAll, void *data)
 
     ierr = VecToArray(epsgrad,gradAll,scatter,from,to,vgradlocal,DegFree);
 
-    if(constr) gradAll[DegFree]=normalpha;
-
+    if(constr==1){
+      gradAll[DegFree]=multipurposescalar;
+    }else if(constr==2){
+      gradAll[DegFree]=0;
+    }
   }
 
   ierr = MatDestroy(&tmpM); CHKERRQ(ierr);
@@ -216,11 +231,15 @@ double EPLDOS(int DegFreeAll,double *epsoptAll, double *gradAll, void *data)
   VecDestroy(&Grad);
   VecDestroy(&epsgrad);
 
-  if(!constr){
-    return ldos;
-  }else{
-    return normalpha*epsoptAll[DegFree]-ldos;
+  double output=0;
+  if(constr==0){
+    output=ldos;
+  }else if(constr==1){
+    output=multipurposescalar*epsoptAll[DegFree]-ldos;
+  }else if(constr==2){
+    output=multipurposescalar-ldos;
   }
+  return output;
 }
 
 

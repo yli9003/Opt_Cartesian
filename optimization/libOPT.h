@@ -56,8 +56,7 @@ typedef struct{
   Vec vgrad;
   KSP ksp;
   int constr;
-  double normalpha;
-  double normbeta;
+  double multipurposescalar;
 } EPdataGroup;
 
 // from MoperatorGeneral.c

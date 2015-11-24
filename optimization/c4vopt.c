@@ -1126,6 +1126,10 @@ if (Job==4){
   if(nummodes==2){
     nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos1data,1e-8);
     nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos2data,1e-8);
+  }else if(nummodes==3){
+    nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos1data,1e-8);
+    nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos2data,1e-8);
+    nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos3data,1e-8);
   }else if(nummodes==4){
     nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos1data,1e-8);
     nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos2data,1e-8);
