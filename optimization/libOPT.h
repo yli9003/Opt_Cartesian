@@ -92,6 +92,8 @@ PetscErrorCode ModifyMatDiagonals( Mat M, Mat A, Mat D, Vec epsSReal, Vec epspml
 
 PetscErrorCode  myinterp(MPI_Comm comm, Mat *Aout, int Nx, int Ny, int Nz, int Nxo, int Nyo, int Nzo, int Mx, int My, int Mz, int Mzslab, int anisotropic);
 
+PetscErrorCode AddEpsToM( Mat M,  Mat D, Vec epsC, int Nxyz, double omega);
+
 // from MathTools.c
 PetscErrorCode CmpVecScale(Vec vin, Vec vout, double a, double b);
 

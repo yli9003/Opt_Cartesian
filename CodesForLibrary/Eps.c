@@ -191,3 +191,52 @@ PetscErrorCode ModifyMatDiagonals( Mat M, Mat A, Mat D, Vec epsSReal, Vec epspml
  PetscFunctionReturn(0);
 }
 
+#undef __FUNCT__ 
+#define __FUNCT__ "AddEpsToM"
+PetscErrorCode AddEpsToM( Mat M,  Mat D, Vec epsC, int Nxyz, double omega)
+{
+
+  PetscErrorCode ierr;
+  Vec epsCi;
+  VecDuplicate(epsC,&epsCi);
+  ierr =MatMult(D,epsC,epsCi);CHKERRQ(ierr); 
+
+  /*---------Modify diagonals of M (more than main diagonals)------*/
+
+  int ns, ne;
+  ierr = MatGetOwnershipRange(M, &ns, &ne); CHKERRQ(ierr);
+
+  double *c, *ci;
+  ierr = VecGetArray(epsC, &c); CHKERRQ(ierr);
+  ierr = VecGetArray(epsCi, &ci); CHKERRQ(ierr);
+
+  int i;
+  double omegasqr=pow(omega,2.0);
+
+  double vr, vi;
+
+  for (i = ns; i < ne; ++i) 
+    {
+      if(i<3*Nxyz)
+	{ vr = c[i-ns];
+	  vi = -ci[i-ns];
+	}
+      else
+	{ vr = ci[i-ns];
+	  vi = c[i-ns];
+	}
+
+      //M = M - omega^2*eps
+      ierr = MatSetValue(M,i,i,-omegasqr*vr,ADD_VALUES);CHKERRQ(ierr);
+      ierr = MatSetValue(M,i,(i+3*Nxyz)%(6*Nxyz), pow(-1,i/(3*Nxyz))*omegasqr*vi,ADD_VALUES);CHKERRQ(ierr);
+    }
+  ierr = MatAssemblyBegin(M, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+  ierr = MatAssemblyEnd(M, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+
+  ierr = VecRestoreArray(epsC, &c); CHKERRQ(ierr);
+  ierr = VecRestoreArray(epsCi, &ci); CHKERRQ(ierr);
+
+  VecDestroy(&epsCi);
+
+  PetscFunctionReturn(0);
+}
