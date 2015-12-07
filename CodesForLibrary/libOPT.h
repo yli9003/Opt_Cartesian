@@ -205,3 +205,6 @@ int eigsolver(Mat M, Vec epsC, Mat D);
 
 // from thgfom.c
 double thgfom(int DegFree,double *epsopt, double *grad, void *data);
+
+// from c4v.c
+PetscErrorCode c4v(MPI_Comm comm, Mat *Aout, int M);
