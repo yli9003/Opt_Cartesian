@@ -208,3 +208,6 @@ PetscErrorCode c4v(MPI_Comm comm, Mat *Aout, int M);
 double EPSOF(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
 
 double EPLDOS(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
+
+// from eigsolver.c
+int eigsolver(Mat M, Vec epsC, Mat D);
