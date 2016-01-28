@@ -36,7 +36,7 @@ double EPSOF(int DegFreeAll,double *epsoptAll, double *gradAll, void *data)
   
   PetscErrorCode ierr;
 
-  PetscPrintf(PETSC_COMM_WORLD,"********Entering the Self-Orthogonality Factor (SOF) calculator with/without constraint condition.********** \n");
+  PetscPrintf(PETSC_COMM_WORLD,"\n********Entering the Self-Orthogonality Factor (SOF) calculator with/without constraint condition.********** \n");
 
   EPdataGroup *ptdata = (EPdataGroup *) data;
 
@@ -54,11 +54,12 @@ double EPSOF(int DegFreeAll,double *epsoptAll, double *gradAll, void *data)
   KSP    ksp = ptdata->ksp;
   int    constr=ptdata->constr;
   double multipurposescalar = ptdata->multipurposescalar;
+  PetscPrintf(PETSC_COMM_WORLD,"---*****The multipurpsescalar for SOF is %g \n", multipurposescalar);
 
   //declare temporary variables
-  Vec epsC, epsCi, epsP, tmp, xconj, Grad;
+  Vec epsC, epsCi, epsP, tmp, xconj, Grad, Grad0, Grad1, xeps, tmpeps;
   Mat tmpM;
-  int DegFree=(constr)*DegFreeAll-1 + (!constr)*DegFreeAll;
+  int DegFree=(constr>0)*(DegFreeAll-1) + (constr==0)*DegFreeAll;
 
   VecDuplicate(x,&epsC);
   VecDuplicate(x,&epsCi);
@@ -66,6 +67,10 @@ double EPSOF(int DegFreeAll,double *epsoptAll, double *gradAll, void *data)
   VecDuplicate(x,&tmp);
   VecDuplicate(x,&xconj);
   VecDuplicate(x,&Grad);
+  VecDuplicate(x,&Grad0);
+  VecDuplicate(x,&Grad1);
+  VecDuplicate(x,&xeps);
+  VecDuplicate(x,&tmpeps);
 
   Vec epsgrad;
   VecDuplicate(epsSReal,&epsgrad);
@@ -80,26 +85,34 @@ double EPSOF(int DegFreeAll,double *epsoptAll, double *gradAll, void *data)
   SolveMatrix(PETSC_COMM_WORLD,ksp,tmpM,b,x,its);
 
   /*-------------Calculate and print out the SOF----------*/
-  //tmpSOF = Magnitude[ E . E ]^2; 
+  //tmpSOF = Magnitude[ eps * E . E ]^2; 
   double SOFr, SOFi, SOF0, SOF;
-  VecPointwiseMult(tmp,x,weight);
+  CmpVecProd(epsC,x,xeps);
+  VecPointwiseMult(tmp,xeps,weight);
   CmpVecDot(tmp,x,&SOFr,&SOFi);
   SOF0=sqrt(0.5*hxyz*hxyz*(SOFr*SOFr + SOFi*SOFi));
   SOF=hxyz*SOF0;
   PetscPrintf(PETSC_COMM_WORLD,"---*****The current SOF for omega %.4e at step %.5d is %.16e \n", omega/(2*PI),count,SOF);
 
   if (gradAll) {
-    KSPSolve(ksp,x,tmp);
-    CmpVecProd(tmp,x,Grad);
-    CmpVecProd(Grad,epscoef,tmp);
-    ierr = VecPointwiseMult(tmp,tmp,weight); CHKERRQ(ierr);
-    VecScale(tmp,2.0*hxyz*hxyz);
+    VecPointwiseMult(tmpeps,epspmlQ,epsDiff);
+    CmpVecProd(tmpeps,x,tmp);
+    CmpVecProd(tmp,x,Grad0);
+    VecPointwiseMult(Grad0,Grad0,weight);
+    VecScale(Grad0,2.0*hxyz*hxyz);
+
+    KSPSolve(ksp,xeps,Grad1);
+    CmpVecProd(Grad1,x,tmp);
+    CmpVecProd(tmp,epscoef,Grad1);
+    ierr = VecPointwiseMult(Grad1,Grad1,weight); CHKERRQ(ierr);
+    VecScale(Grad1,2.0*hxyz*hxyz);
     
     MatMult(D,vR,xconj);
     VecScale(xconj,-1.0*SOFi);
     VecAXPY(xconj,SOFr,vR);
 
-    CmpVecProd(xconj,tmp,Grad);
+    VecAXPY(Grad1,1.0,Grad0);
+    CmpVecProd(xconj,Grad1,Grad);
     ierr = VecPointwiseMult(Grad,Grad,vR); CHKERRQ(ierr);
     VecScale(Grad,0.5*hxyz/SOF0);
 
@@ -113,7 +126,7 @@ double EPSOF(int DegFreeAll,double *epsoptAll, double *gradAll, void *data)
     if(constr==1){
       gradAll[DegFree]=multipurposescalar/(epsoptAll[DegFree]*epsoptAll[DegFree]);
     }else if(constr==2){
-      gradAll[DegFree]=multipurposescalar;
+      gradAll[DegFree]=-1.0*multipurposescalar;
     }
   }
 
@@ -127,14 +140,21 @@ double EPSOF(int DegFreeAll,double *epsoptAll, double *gradAll, void *data)
   VecDestroy(&Grad);
   VecDestroy(&epsgrad);
   VecDestroy(&xconj);
+  VecDestroy(&Grad0);
+  VecDestroy(&Grad1);
+  VecDestroy(&xeps);
+  VecDestroy(&tmpeps);
 
   double output=0;
   if(constr==0){
     output=SOF;
+    PetscPrintf(PETSC_COMM_WORLD,"---*****Since sofconstr is %d, we computed SOF, %g \n",constr,output);
   }else if(constr==1){
     output=SOF - multipurposescalar/epsoptAll[DegFree];
+    PetscPrintf(PETSC_COMM_WORLD,"---*****Since sofconstr is %d, we computed SOF - b/t, %g \n",constr,output);
   }else if(constr==2){
     output=SOF - multipurposescalar*epsoptAll[DegFree];
+    PetscPrintf(PETSC_COMM_WORLD,"---*****Since sofconstr is %d, we computed SOF - b*t, %g , with t value, %g \n",constr,output,epsoptAll[DegFree]);
   }
   return output;
 }
@@ -169,7 +189,7 @@ double EPLDOS(int DegFreeAll,double *epsoptAll, double *gradAll, void *data)
   //declare temporary variables
   Vec epsC, epsCi, epsP, tmp, Grad;
   Mat tmpM;
-  int DegFree=(constr)*DegFreeAll-1 + (!constr)*DegFreeAll;
+  int DegFree=(constr>0)*(DegFreeAll-1) + (constr==0)*DegFreeAll;
 
   VecDuplicate(x,&epsC);
   VecDuplicate(x,&epsCi);
@@ -234,10 +254,13 @@ double EPLDOS(int DegFreeAll,double *epsoptAll, double *gradAll, void *data)
   double output=0;
   if(constr==0){
     output=ldos;
+    PetscPrintf(PETSC_COMM_WORLD,"---*****Since ldosconstr is %d, we computed ldos, %g \n",constr,output);
   }else if(constr==1){
     output=multipurposescalar*epsoptAll[DegFree]-ldos;
+    PetscPrintf(PETSC_COMM_WORLD,"---*****Since ldosconstr is %d, we computed a*t - ldos, %g \n",constr,output);
   }else if(constr==2){
     output=multipurposescalar-ldos;
+    PetscPrintf(PETSC_COMM_WORLD,"---*****Since ldosconstr is %d, we computed a - ldos, %g \n",constr,output);   
   }
   return output;
 }

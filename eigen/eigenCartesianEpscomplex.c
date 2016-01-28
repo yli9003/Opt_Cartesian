@@ -12,6 +12,8 @@ Vec vR;
 int mma_verbose;
 Vec epsFReal;
 
+PetscErrorCode ComplexVectorProduct(Vec va, Vec vb, Vec vout, Mat D);
+
 #undef __FUNCT__ 
 #define __FUNCT__ "main" 
 int main(int argc, char **argv)
@@ -26,16 +28,13 @@ int main(int argc, char **argv)
   if(myrank==0) 
     mma_verbose=1;
 
-  int DegFree, Mzslab;
-  int Mx, My, Mz, Npmlx, Npmly, Npmlz, Nx, Ny, Nz, Nxyz;
+  int Npmlx, Npmly, Npmlz, Nx, Ny, Nz, Nxyz;
   double hx, hy, hz;
   double omega;
-  double epsx, epsy, epsz, epsair, epssub;
   double RRT, sigmax, sigmay, sigmaz;
-  double Qabs;
-  char initialdatafile[PETSC_MAX_PATH_LEN];
+  char epsfile[PETSC_MAX_PATH_LEN];
   Mat M;
-  Vec epsSReal, epsDiff, epsmedium, epspmlQ;
+  Vec epsNoPML, epspml, epsC;
   
 /*****************************************************-------Set up the options parameters-------------********************************************************/
 /**************************************************************************************************************************************************************/
@@ -54,9 +53,6 @@ int main(int argc, char **argv)
     PetscOptionsGetReal(PETSC_NULL,"-betaz",beta+2,&flg); MyCheckAndOutputDouble(flg,beta[2],"betaz","Bloch vector component betaz");
   }
   
-  PetscOptionsGetInt(PETSC_NULL,"-Mx",&Mx,&flg);  MyCheckAndOutputInt(flg,Mx,"Mx","Mx");
-  PetscOptionsGetInt(PETSC_NULL,"-My",&My,&flg);  MyCheckAndOutputInt(flg,My,"My","My");
-  PetscOptionsGetInt(PETSC_NULL,"-Mz",&Mz,&flg);  MyCheckAndOutputInt(flg,Mz,"Mz","Mz");
   PetscOptionsGetInt(PETSC_NULL,"-Npmlx",&Npmlx,&flg);  MyCheckAndOutputInt(flg,Npmlx,"Npmlx","Npmlx");
   PetscOptionsGetInt(PETSC_NULL,"-Npmly",&Npmly,&flg);  MyCheckAndOutputInt(flg,Npmly,"Npmly","Npmly");
   PetscOptionsGetInt(PETSC_NULL,"-Npmlz",&Npmlz,&flg);  MyCheckAndOutputInt(flg,Npmlz,"Npmlz","Npmlz");
@@ -64,7 +60,6 @@ int main(int argc, char **argv)
   PetscOptionsGetInt(PETSC_NULL,"-Nx",&Nx,&flg);  MyCheckAndOutputInt(flg,Nx,"Nx","Nx");
   PetscOptionsGetInt(PETSC_NULL,"-Ny",&Ny,&flg);  MyCheckAndOutputInt(flg,Ny,"Ny","Ny");
   PetscOptionsGetInt(PETSC_NULL,"-Nz",&Nz,&flg);  MyCheckAndOutputInt(flg,Nz,"Nz","Nz");
-  PetscOptionsGetInt(PETSC_NULL,"-Mzslab",&Mzslab,&flg);  MyCheckAndOutputInt(flg,Mzslab,"Mzslab","Mzslab");
 
   PetscOptionsGetReal(PETSC_NULL,"-hx",&hx,&flg);  MyCheckAndOutputDouble(flg,hx,"hx","hx");
   PetscOptionsGetReal(PETSC_NULL,"-hy",&hy,&flg);  MyCheckAndOutputDouble(flg,hy,"hy","hy");
@@ -88,28 +83,14 @@ int main(int argc, char **argv)
   PetscPrintf(PETSC_COMM_WORLD,"-------freq: %g \n",freq);
   omega=2.0*PI*freq;
 
-  PetscOptionsGetReal(PETSC_NULL,"-epsx",&epsx,&flg); MyCheckAndOutputDouble(flg,epsx,"epsx","epsx");
-  PetscOptionsGetReal(PETSC_NULL,"-epsy",&epsy,&flg); MyCheckAndOutputDouble(flg,epsy,"epsy","epsy");
-  PetscOptionsGetReal(PETSC_NULL,"-epsz",&epsz,&flg); MyCheckAndOutputDouble(flg,epsz,"epsz","epsz");
-
-  PetscOptionsGetReal(PETSC_NULL,"-epsmed",&epsair,&flg);
-  if(!flg) epsair=1.0;
-  if(flg) MyCheckAndOutputDouble(flg,epsair,"epsair","Dielectric of surrounding medium");
-  PetscOptionsGetReal(PETSC_NULL,"-epssub",&epssub,&flg);
-  if(!flg) epssub=1.0; 
-  if(flg) MyCheckAndOutputDouble(flg,epssub,"epssub","Dielectric of substrate at freq");
-
   RRT=1e-25;
   sigmax = pmlsigma(RRT,(double) Npmlx*hx);
   sigmay = pmlsigma(RRT,(double) Npmly*hy);
   sigmaz = pmlsigma(RRT,(double) Npmlz*hz);
 
-  PetscPrintf(PETSC_COMM_WORLD,"sigma, omega, DegFree: %g, %g, %g, %g \n", sigmax, sigmay, sigmaz, omega);
+  PetscPrintf(PETSC_COMM_WORLD,"sigma, omega: %g, %g, %g, %g \n", sigmax, sigmay, sigmaz, omega);
 
-  PetscOptionsGetReal(PETSC_NULL,"-Qabs",&Qabs,&flg);  MyCheckAndOutputDouble(flg,Qabs,"Qabs","Qabs");
-  if (Qabs>1e15) Qabs=1.0/0.0;
-
-  PetscOptionsGetString(PETSC_NULL,"-initdatfile",initialdatafile,PETSC_MAX_PATH_LEN,&flg); MyCheckAndOutputChar(flg,initialdatafile,"initialdatafile","Inputdata file");
+  PetscOptionsGetString(PETSC_NULL,"-epsfile",epsfile,PETSC_MAX_PATH_LEN,&flg); MyCheckAndOutputChar(flg,epsfile,"epsfile","Inputdata file");
 
 /**************************************************************************************************************************************************************/
 /**************************************************************************************************************************************************************/
@@ -118,10 +99,8 @@ int main(int argc, char **argv)
 /**************************************************************************************************************************************************************/
 
 
-  /*------Set up the A, C, D matrices--------------*/
+  /*------Set up the C, D matrices--------------*/
   Nxyz=Nx*Ny*Nz;
-  DegFree = (Mzslab==0) * Mx*My*Mz + (Mzslab==1) * Mx*My;
-  myinterp(PETSC_COMM_WORLD, &A, Nx,Ny,Nz, LowerPML*floor((Nx-Mx)/2),LowerPML*floor((Ny-My)/2),LowerPML*floor((Nz-Mz)/2), Mx,My,Mz,Mzslab,0);
   CongMat(PETSC_COMM_WORLD, &C, 6*Nxyz);
   ImagIMat(PETSC_COMM_WORLD, &D,6*Nxyz);
 
@@ -137,6 +116,7 @@ int main(int argc, char **argv)
   double *muinv;
   muinv = (double *) malloc(sizeof(double)*6*Nxyz);
   int add=0;
+  double Qabs=1.0/0.0;
   AddMuAbsorption(muinv,munivpml,Qabs,add);
 
   if(blochcondition){
@@ -147,49 +127,23 @@ int main(int argc, char **argv)
   ierr = PetscObjectSetName((PetscObject) M, "M"); CHKERRQ(ierr);
 
 
-  /*----Set up the epsilon PML vectors--------*/
-  Vec unitx,unity,unitz;
-  ierr = VecDuplicate(vR,&unitx);CHKERRQ(ierr);
-  ierr = VecDuplicate(vR,&unity);CHKERRQ(ierr);
-  ierr = VecDuplicate(vR,&unitz);CHKERRQ(ierr);
-  GetUnitVec(unitx,0,6*Nxyz);
-  GetUnitVec(unity,1,6*Nxyz);
-  GetUnitVec(unitz,2,6*Nxyz);
-
-  ierr = VecDuplicate(vR,&epsDiff); CHKERRQ(ierr);
-
-  VecSet(epsDiff,0.0);
-  VecAXPY(epsDiff,epsx,unitx);
-  VecAXPY(epsDiff,epsy,unity);
-  VecAXPY(epsDiff,epsz,unitz);
-
-  Vec epspml;
+  /*----Set up the epsilon and PML vectors--------*/
+  ierr = VecDuplicate(vR,&epsNoPML); CHKERRQ(ierr);
   ierr = VecDuplicate(vR,&epspml);CHKERRQ(ierr);
-  ierr = VecDuplicate(vR,&epspmlQ);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) epspmlQ,"EpsPMLQ"); CHKERRQ(ierr);
+  ierr = VecDuplicate(vR,&epsC);CHKERRQ(ierr);
 
   EpsPMLFull(PETSC_COMM_WORLD, epspml,Nx,Ny,Nz,Npmlx,Npmly,Npmlz,sigmax,sigmay,sigmaz,omega, LowerPML);
-  ierr =MatMult(D,epspml,epspmlQ); CHKERRQ(ierr);
-  ierr =VecScale(epspmlQ, 1.0/Qabs); CHKERRQ(ierr);
-  ierr =VecAXPY(epspmlQ, 1.0, epspml);CHKERRQ(ierr);
 
-  /*-----Set up epsmedium, epsSReal, epsFReal ------*/
-  ierr = VecDuplicate(vR,&epsmedium); CHKERRQ(ierr);
-  //GetMediumVecwithSub(epsmedium,Nz,Mz,epsair,epssub);
-  GetMediumVec(epsmedium,Nz,Mz,epsair,epssub);
-
-  ierr = MatGetVecs(A,&epsSReal, &epsFReal); CHKERRQ(ierr);
-
-  /*---------Setup the epsopt and grad arrays----------------*/
-  double *epsopt;
+  /*---------Setup the epsArray----------------*/
+  double *epsArray;
   FILE *ptf;
-  epsopt = (double *) malloc(DegFree*sizeof(double));
-  ptf = fopen(initialdatafile,"r");
-  PetscPrintf(PETSC_COMM_WORLD,"reading from input files \n");
+  epsArray = (double *) malloc(6*Nxyz*sizeof(double));
+  ptf = fopen(epsfile,"r");
+  PetscPrintf(PETSC_COMM_WORLD,"reading from input epsilon files \n");
   int i;
-  for (i=0;i<DegFree;i++)
+  for (i=0;i<6*Nxyz;i++)
     { 
-      fscanf(ptf,"%lf",&epsopt[i]);
+      fscanf(ptf,"%lf",&epsArray[i]);
     }
   fclose(ptf);
 
@@ -204,40 +158,27 @@ int main(int argc, char **argv)
 /**************************************************************************************************************************************************************/
 
 /*-------------------------------------------------------------------------*/
-  ierr=ArrayToVec(epsopt, epsSReal); CHKERRQ(ierr);									
-  ierr=MatMult(A,epsSReal,epsFReal); CHKERRQ(ierr);
-  ModifyMatDiag(M, D, epsFReal, epsDiff, epsmedium, epspmlQ, omega, Nx, Ny, Nz);
+  ierr=ArrayToVec(epsArray, epsNoPML); CHKERRQ(ierr);								     
 
-  ierr=VecPointwiseMult(epsFReal,epsFReal,epsDiff); CHKERRQ(ierr);							
-  ierr=VecAXPY(epsFReal,1.0,epsmedium); CHKERRQ(ierr);								
-  OutputVec(PETSC_COMM_WORLD, epsFReal, "epsF",".m");
-  ierr=VecPointwiseMult(epsFReal,epsFReal,epspmlQ); CHKERRQ(ierr);
+  ComplexVectorProduct(epsNoPML,epspml,epsC,D);
+  AddEpsToM(M,D,epsC,Nxyz,omega); 
 
-  OutputVec(PETSC_COMM_WORLD, epsmedium, "epsmed",".m");
-  
-  eigsolver(M,epsFReal,D);
+  eigsolver(M,epsC,D);
 /*-------------------------------------------------------------------------*/
 
-  ierr = MatDestroy(&A); CHKERRQ(ierr);
   ierr = MatDestroy(&C); CHKERRQ(ierr);
   ierr = MatDestroy(&D); CHKERRQ(ierr);
   ierr = MatDestroy(&M); CHKERRQ(ierr);  
 
   ierr = VecDestroy(&vR); CHKERRQ(ierr);
-  ierr = VecDestroy(&unitx); CHKERRQ(ierr);
-  ierr = VecDestroy(&unity); CHKERRQ(ierr);
-  ierr = VecDestroy(&unitz); CHKERRQ(ierr);
-  ierr = VecDestroy(&epsDiff); CHKERRQ(ierr);
 
   ierr = VecDestroy(&munivpml); CHKERRQ(ierr);
   ierr = VecDestroy(&epspml); CHKERRQ(ierr);
-  ierr = VecDestroy(&epspmlQ); CHKERRQ(ierr);
-  ierr = VecDestroy(&epsmedium); CHKERRQ(ierr);
-  ierr = VecDestroy(&epsSReal); CHKERRQ(ierr);
-  ierr = VecDestroy(&epsFReal); CHKERRQ(ierr);
+  ierr = VecDestroy(&epsNoPML); CHKERRQ(ierr);
+  ierr = VecDestroy(&epsC); CHKERRQ(ierr);
 
   free(muinv);
-  free(epsopt);
+  free(epsArray);
 
   /*------------ finalize the program -------------*/
 
@@ -252,5 +193,48 @@ int main(int argc, char **argv)
   return 0;
 }
   
+PetscErrorCode ComplexVectorProduct(Vec va, Vec vb, Vec vout, Mat D)
+{
+  PetscErrorCode ierr;
 
+  int N;
+  ierr=VecGetSize(va, &N); CHKERRQ(ierr);
+
+  Vec vai,vbi;
+  ierr=VecDuplicate(va, &vai); CHKERRQ(ierr);
+  ierr=VecDuplicate(va, &vbi); CHKERRQ(ierr);
+  
+  ierr=MatMult(D,va,vai);CHKERRQ(ierr);
+  ierr=MatMult(D,vb,vbi);CHKERRQ(ierr);
+
+  double *a, *b, *ai, *bi, *out;
+  ierr=VecGetArray(va,&a);CHKERRQ(ierr);
+  ierr=VecGetArray(vb,&b);CHKERRQ(ierr);
+  ierr=VecGetArray(vai,&ai);CHKERRQ(ierr);
+  ierr=VecGetArray(vbi,&bi);CHKERRQ(ierr);
+  ierr=VecGetArray(vout,&out);CHKERRQ(ierr);
+
+  int i, ns, ne, nlocal;
+  ierr = VecGetOwnershipRange(vout, &ns, &ne);
+  nlocal = ne-ns;
+
+  for (i=0; i<nlocal; i++)
+    {  
+      if(i<(N/2-ns)) // N is the total length of Vec;
+	out[i] = a[i]*b[i] - ai[i]*bi[i];
+      else
+	out[i] = ai[i]*b[i] + a[i]*bi[i];
+    }
+  
+  ierr=VecRestoreArray(va,&a);CHKERRQ(ierr);
+  ierr=VecRestoreArray(vb,&b);CHKERRQ(ierr);
+  ierr=VecRestoreArray(vai,&ai);CHKERRQ(ierr);
+  ierr=VecRestoreArray(vbi,&bi);CHKERRQ(ierr);
+  ierr=VecRestoreArray(vout,&out);CHKERRQ(ierr);
+
+  ierr=VecDestroy(&vai);CHKERRQ(ierr);
+  ierr=VecDestroy(&vbi);CHKERRQ(ierr);
+  
+  PetscFunctionReturn(0);
+}
 

@@ -811,7 +811,11 @@ if (Job==2){
   int nummodes;
   PetscOptionsGetInt(PETSC_NULL,"-nummodes",&nummodes,&flg);  MyCheckAndOutputInt(flg,nummodes,"nummodes","number of degenerate modes (2, 3 or 4) to collapse");
 
-  if(nummodes==220){
+  if(nummodes==110){
+    nlopt_add_inequality_constraint(opt,EPLDOS,&freq1dataldos,1e-8);
+  }else if(nummodes==101){
+    nlopt_add_inequality_constraint(opt,EPSOF,&freq1datasof,1e-8);
+  }else if(nummodes==220){
     nlopt_add_inequality_constraint(opt,EPLDOS,&freq1dataldos,1e-8);
     nlopt_add_inequality_constraint(opt,EPLDOS,&freq2dataldos,1e-8);
   }else if(nummodes==330){
@@ -861,8 +865,10 @@ if (Job==2){
   }
 
   if(minormax==0){
+    PetscPrintf(PETSC_COMM_WORLD,"*********************This is minimizing the maximum! ");
     nlopt_set_min_objective(opt,maxminobjfun,NULL);   
   }else{
+    PetscPrintf(PETSC_COMM_WORLD,"*********************This is maximizing the minimum! ");
     nlopt_set_max_objective(opt,maxminobjfun,NULL);   
   }
 

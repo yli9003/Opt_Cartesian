@@ -17,7 +17,8 @@ epsilon=epsdiff*epsbar+epsbkg;
 epsilon=reshape(epsilon,Ny,Nx);
 hdf5write('tmp.h5','/eps',epsilon);
 
-runmpb=['mpirun -np ',num2str(np),' mpb-mpi ',mpbctlfile,' | grep freqs | grep -v kmag | cut -d" " -f',num2str(modenum+6)];
+runmpb=['mpirun -np ',num2str(np),' mpb-mpi numbands=',num2str(modenum),' ',mpbctlfile,' | grep freqs | grep -v kmag | cut -d" " -f',num2str(modenum+6)];
+%runmpb=['mpirun -np ',num2str(np),' mpb-mpi ',mpbctlfile,' | grep freqs | grep -v kmag | cut -d" " -f',num2str(modenum+6)];
 
 [status,freq]=system(runmpb);
 
