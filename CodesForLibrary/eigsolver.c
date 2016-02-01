@@ -52,15 +52,15 @@ int eigsolver(Mat M, Vec epsC, Mat D)
   errorarray =(double *) malloc(sizeof(double)*nconv);
 
   Vec xr, xi;
-  ierr=MatGetVecs(M,PETSC_NULL,&xr); CHKERRQ(ierr);
-  ierr=MatGetVecs(M,PETSC_NULL,&xi); CHKERRQ(ierr);
+  ierr=MatCreateVecs(M,PETSC_NULL,&xr); CHKERRQ(ierr);
+  ierr=MatCreateVecs(M,PETSC_NULL,&xi); CHKERRQ(ierr);
   ierr=PetscObjectSetName((PetscObject) xr, "xr"); CHKERRQ(ierr);
   ierr=PetscObjectSetName((PetscObject) xi, "xi"); CHKERRQ(ierr);
   int ni;
   for(ni=0; ni<nconv; ni++)
     {
       ierr=EPSGetEigenpair(eps, ni, krarray+ni, kiarray+ni, xr, xi);CHKERRQ(ierr);
-      ierr = EPSComputeRelativeError(eps,ni,errorarray+ni);CHKERRQ(ierr);
+      ierr = EPSComputeError(eps,ni,EPS_ERROR_RELATIVE,errorarray+ni);CHKERRQ(ierr);
       
       char bufferr[100], bufferi[100];
       sprintf(bufferr,"%.2dxr.m",ni+1);

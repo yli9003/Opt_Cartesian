@@ -1,12 +1,12 @@
 all: MoperatorGeneral.o MoperatorGeneralBloch_XdL.o SourceGeneration.o PML.o Eps.o MathTools.o MatVecMaker.o Output.o DifferentialOps.o mympisetup.o ldos.o projsimpoverlap.o singleldos.o ldosonly.o filters.o alpha.o FOM.o ldosconstraint.o lens.o c4v.o EP.o eigsolver.o
 
-export PETSC_DIR=/etc/petsc-3.5.3
+export PETSC_DIR=/opt/local/petsc-3.6.3
 export PETSC_ARCH=arch-opt
-export SLEPC_DIR=/etc/slepc-3.5.4
+export SLEPC_DIR=/opt/local/slepc-3.6.2
 
-include ${PETSC_DIR}/conf/variables
-include ${PETSC_DIR}/conf/rules
-include ${SLEPC_DIR}/conf/slepc_common
+include ${PETSC_DIR}/lib/petsc/conf/variables
+include ${PETSC_DIR}/lib/petsc/conf/rules
+include ${SLEPC_DIR}/lib/slepc/conf/slepc_common
 CLEANFILES =  MoperatorGeneral.o MoperatorGeneralBloch_XdL.o SourceGeneration.o PML.o Eps.o MathTools.o MatVecMaker.o Output.o DifferentialOps.o mympisetup.o ldos.o projsimpoverlap.o singleldos.o ldosonly.o filters.o alpha.o FOM.o ldosconstraint.o lens.o c4v.o EP.o eigsolver.o
 
 MoperatorGeneral: MoperatorGeneral.o

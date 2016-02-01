@@ -1,12 +1,12 @@
 all: optexec sixmodes_exec c4vopt_exec EPopt_exec solver_exec
 
-export PETSC_DIR=/etc/petsc-3.5.3
+export PETSC_DIR=/opt/local/petsc-3.6.3
 export PETSC_ARCH=arch-opt
-export CavityLibPath=~/share/Opt_Cartesian/CodesForLibrary
+export CavityLibPath=../CodesForLibrary
 export NloptLibPath=/usr/local/lib/
 
-include ${PETSC_DIR}/conf/variables
-include ${PETSC_DIR}/conf/rules
+include ${PETSC_DIR}/lib/petsc/conf/variables
+include ${PETSC_DIR}/lib/petsc/conf/rules
 CLEANFILES = opt.o sixldos.o c4vopt.o EPopt.o solver.o
 
 optexec: opt.o 

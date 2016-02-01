@@ -178,7 +178,7 @@ int main(int argc, char **argv)
   //GetMediumVecwithSub(epsmedium,Nz,Mz,epsair,epssub);
   GetMediumVec(epsmedium,Nz,Mz,epsair,epssub);
 
-  ierr = MatGetVecs(A,&epsSReal, &epsFReal); CHKERRQ(ierr);
+  ierr = MatCreateVecs(A,&epsSReal, &epsFReal); CHKERRQ(ierr);
 
   /*---------Setup the epsopt and grad arrays----------------*/
   double *epsopt;

@@ -342,7 +342,7 @@ int main(int argc, char **argv)
   //GetMediumVec(epsmedium1,Nz,Mz,epsair,epssub1);
   //GetMediumVec(epsmedium2,Nz,Mz,epsair,epssub2);
 
-  ierr = MatGetVecs(A,&epsSReal, &epsFReal); CHKERRQ(ierr);
+  ierr = MatCreateVecs(A,&epsSReal, &epsFReal); CHKERRQ(ierr);
   
   ierr = VecDuplicate(vR, &epsC); CHKERRQ(ierr);
   ierr = VecDuplicate(vR, &epsCi); CHKERRQ(ierr);
@@ -501,7 +501,7 @@ int main(int argc, char **argv)
   /**/	if(threeDim){															/**/
   /**/		ierr = PetscPrintf(PETSC_COMM_WORLD,"--------Interpolation matrix A has been set up.--------\n ");CHKERRQ(ierr);	/**/
   /**/		Vec tmpepsSReal, tmpepsFReal;												/**/
-  /**/		ierr = MatGetVecs(A,&tmpepsSReal, &tmpepsFReal); CHKERRQ(ierr);								/**/
+  /**/		ierr = MatCreateVecs(A,&tmpepsSReal, &tmpepsFReal); CHKERRQ(ierr);								/**/
   /**/																	/**/
   /**/		double *tmpepsopt;													/**/
   /**/		FILE *tmpptf;														/**/
@@ -561,7 +561,7 @@ int main(int argc, char **argv)
   
   if(imposec4v){
     Vec tmp;
-    ierr = MatGetVecs(A2,&tmp, &epsSquare); CHKERRQ(ierr);
+    ierr = MatCreateVecs(A2,&tmp, &epsSquare); CHKERRQ(ierr);
     ierr = MatMult(A2,epsSReal,epsSquare); CHKERRQ(ierr);
     OutputVec(PETSC_COMM_WORLD, epsSquare, "c4veps",".m");
     OutputMat(PETSC_COMM_WORLD, A2, "c4vMatrix",".m");
