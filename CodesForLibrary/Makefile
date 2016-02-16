@@ -1,4 +1,4 @@
-all: MoperatorGeneral.o MoperatorGeneralBloch_XdL.o SourceGeneration.o PML.o Eps.o MathTools.o MatVecMaker.o Output.o DifferentialOps.o mympisetup.o ldos.o projsimpoverlap.o singleldos.o ldosonly.o filters.o alpha.o FOM.o ldosconstraint.o lens.o c4v.o EP.o eigsolver.o
+all: MoperatorGeneral.o MoperatorGeneralBloch_XdL.o SourceGeneration.o PML.o Eps.o MathTools.o MatVecMaker.o Output.o DifferentialOps.o mympisetup.o ldos.o projsimpoverlap.o singleldos.o ldosonly.o filters.o alpha.o FOM.o thgfom_arbitraryPol.o ldosconstraint.o ldoskconstraint.o ldoskonly.o lens.o c4v.o EP.o eigsolver.o
 
 export PETSC_DIR=/opt/local/petsc-3.6.3
 export PETSC_ARCH=arch-opt
@@ -7,7 +7,7 @@ export SLEPC_DIR=/opt/local/slepc-3.6.2
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 include ${SLEPC_DIR}/lib/slepc/conf/slepc_common
-CLEANFILES =  MoperatorGeneral.o MoperatorGeneralBloch_XdL.o SourceGeneration.o PML.o Eps.o MathTools.o MatVecMaker.o Output.o DifferentialOps.o mympisetup.o ldos.o projsimpoverlap.o singleldos.o ldosonly.o filters.o alpha.o FOM.o ldosconstraint.o lens.o c4v.o EP.o eigsolver.o
+CLEANFILES =  MoperatorGeneral.o MoperatorGeneralBloch_XdL.o SourceGeneration.o PML.o Eps.o MathTools.o MatVecMaker.o Output.o DifferentialOps.o mympisetup.o ldos.o projsimpoverlap.o singleldos.o ldosonly.o filters.o alpha.o FOM.o thgfom_arbitraryPol.o ldosconstraint.o ldoskconstraint.o ldoskonly.o lens.o c4v.o EP.o eigsolver.o
 
 MoperatorGeneral: MoperatorGeneral.o
 	$(CLINKER) -Wall -g -o $@ MoperatorGeneral.o  
@@ -43,8 +43,14 @@ alpha:alpha.o
 	$(CLINKER) -Wall -g -o $@ alpha.o
 FOM:FOM.o
 	$(CLINKER) -Wall -g -o $@ FOM.o
+thgfom_arbitraryPol:thgfom_arbitraryPol.o
+	$(CLINKER) -Wall -g -o $@ thgfom_arbitraryPol.o
 ldosconstraint:ldosconstraint.o
 	$(CLINKER) -Wall -g -o $@ ldosconstraint.o
+ldoskconstraint:ldoskconstraint.o
+	$(CLINKER) -Wall -g -o $@ ldoskconstraint.o
+ldoskonly:ldoskonly.o
+	$(CLINKER) -Wall -g -o $@ ldoskonly.o
 lens:lens.o
 	$(CLINKER) -Wall -g -o $@ lens.o
 c4v:c4v.o

@@ -88,10 +88,7 @@ int main(int argc, char **argv)
     PetscOptionsGetReal(PETSC_NULL,"-beta2y",beta2+1,&flg); MyCheckAndOutputDouble(flg,beta2[1],"beta2y","Bloch vector component beta2y");
     PetscOptionsGetReal(PETSC_NULL,"-beta2z",beta2+2,&flg); MyCheckAndOutputDouble(flg,beta2[2],"beta2z","Bloch vector component beta2z");
   }
-
-  int imposec4v;
-  PetscOptionsGetInt(PETSC_NULL,"-imposec4v",&imposec4v,&flg);  MyCheckAndOutputInt(flg,imposec4v,"imposec4v","imposec4v");
-
+  
   PetscOptionsGetInt(PETSC_NULL,"-Mx",&Mx,&flg);  MyCheckAndOutputInt(flg,Mx,"Mx","Mx");
   PetscOptionsGetInt(PETSC_NULL,"-My",&My,&flg);  MyCheckAndOutputInt(flg,My,"My","My");
   PetscOptionsGetInt(PETSC_NULL,"-Mz",&Mz,&flg);  MyCheckAndOutputInt(flg,Mz,"Mz","Mz");
@@ -106,9 +103,10 @@ int main(int argc, char **argv)
 
   int anisotropicDOF=0;
   Mxyz=Mx*My*Mz, Nxyz=Nx*Ny*Nz;
-  DegFree = (imposec4v==0)*(anisotropicDOF ? 3 : 1 )*Mx*My*((Mzslab==0)?Mz:1) + (imposec4v==1)*Mx*(Mx+1)/2;
+  DegFree = (anisotropicDOF ? 3 : 1 )*Mx*My*((Mzslab==0)?Mz:1);
   PetscOptionsGetReal(PETSC_NULL,"-hx",&hx,&flg);  MyCheckAndOutputDouble(flg,hx,"hx","hx");
-  hy=hx, hz=hx;
+  PetscOptionsGetReal(PETSC_NULL,"-hy",&hy,&flg);  MyCheckAndOutputDouble(flg,hy,"hy","hy");
+  PetscOptionsGetReal(PETSC_NULL,"-hz",&hz,&flg);  MyCheckAndOutputDouble(flg,hz,"hz","hz");
   hxyz = (Nz==1)*hx*hy + (Nz>1)*hx*hy*hz;
 
   int BCPeriod, LowerPML;
@@ -222,23 +220,10 @@ int main(int argc, char **argv)
 /**************************************************************************************************************************************************************/
 /**************************************************************************************************************************************************************/
 /**************************************************************************************************************************************************************/
-  
-  //Accessory vectors and matrices for the case of c4v degrees of freedom
-  Mat A1, A2;
-  Vec epsSquare;
+
 
   /*------Set up the A, B, C, D matrices--------------*/
-  if(imposec4v==0){
-    myinterp(PETSC_COMM_WORLD, &A, Nx,Ny,Nz, LowerPML*floor((Nx-Mx)/2),LowerPML*floor((Ny-My)/2),LowerPML*floor((Nz-Mz)/2), Mx,My,Mz,Mzslab, anisotropicDOF);
-  }else{
-    myinterp(PETSC_COMM_WORLD, &A1, Nx,Ny,Nz, LowerPML*floor((Nx-Mx)/2),LowerPML*floor((Ny-My)/2),LowerPML*floor((Nz-Mz)/2), Mx,My,Mz,Mzslab, anisotropicDOF);
-    c4v(PETSC_COMM_WORLD, &A2, Mx);
-    MatMatMult(A1,A2,MAT_INITIAL_MATRIX,PETSC_DEFAULT,&A);
-  }
-
-  int Arows, Acols;
-  MatGetSize(A,&Arows,&Acols);
-  PetscPrintf(PETSC_COMM_WORLD,"****Dimensions of A is %d by %d \n",Arows,Acols);
+  myinterp(PETSC_COMM_WORLD, &A, Nx,Ny,Nz, LowerPML*floor((Nx-Mx)/2),LowerPML*floor((Ny-My)/2),LowerPML*floor((Nz-Mz)/2), Mx,My,Mz,Mzslab, anisotropicDOF);
   GetDotMat(PETSC_COMM_WORLD, &B, Nx, Ny, Nz);
   CongMat(PETSC_COMM_WORLD, &C, 6*Nxyz);
   ImagIMat(PETSC_COMM_WORLD, &D,6*Nxyz);
@@ -325,10 +310,9 @@ int main(int argc, char **argv)
   /*-----Set up epsmedium, epsSReal, epsFReal, epsC, epsCi, epsP, vgrad, vgradlocal ------*/
   ierr = VecDuplicate(vR,&epsmedium1); CHKERRQ(ierr);
   ierr = VecDuplicate(vR,&epsmedium2); CHKERRQ(ierr);
-  GetMediumVecwithSub(epsmedium1,Nz,Mz,epsair,epssub1);
-  GetMediumVecwithSub(epsmedium2,Nz,Mz,epsair,epssub2);
-  //GetMediumVec(epsmedium1,Nz,Mz,epsair,epssub1);
-  //GetMediumVec(epsmedium2,Nz,Mz,epsair,epssub2);
+  //GetMediumVecwithSub(epsmedium,Nz,Mz,epsair,epssub);
+  GetMediumVec(epsmedium1,Nz,Mz,epsair,epssub1);
+  GetMediumVec(epsmedium2,Nz,Mz,epsair,epssub2);
 
   ierr = MatCreateVecs(A,&epsSReal, &epsFReal); CHKERRQ(ierr);
   
@@ -374,22 +358,7 @@ int main(int argc, char **argv)
   PetscOptionsGetInt(PETSC_NULL,"-Jopt",&Jopt,&flg);
 
   if (!flg) Jopt=0;
-  if(Jopt==1){ //make a block source
-    
-    double lx,ux,ly,uy,lz,uz,amp;
-    PetscOptionsGetReal(PETSC_NULL,"-lx",&lx,&flg); MyCheckAndOutputDouble(flg,lx,"lx","lx");
-    PetscOptionsGetReal(PETSC_NULL,"-ux",&ux,&flg); MyCheckAndOutputDouble(flg,ux,"ux","ux");
-    PetscOptionsGetReal(PETSC_NULL,"-ly",&ly,&flg); MyCheckAndOutputDouble(flg,ly,"ly","ly");
-    PetscOptionsGetReal(PETSC_NULL,"-uy",&uy,&flg); MyCheckAndOutputDouble(flg,uy,"uy","uy");
-    PetscOptionsGetReal(PETSC_NULL,"-lz",&lz,&flg); MyCheckAndOutputDouble(flg,lz,"lz","lz");
-    PetscOptionsGetReal(PETSC_NULL,"-uz",&uz,&flg); MyCheckAndOutputDouble(flg,uz,"uz","uz");
-    PetscOptionsGetReal(PETSC_NULL,"-amp",&amp,&flg); MyCheckAndOutputDouble(flg,amp,"amp","amp");
-
-    VecSet(J1,0.0);
-    SourceBlock(PETSC_COMM_WORLD,&J1,Nx,Ny,Nz,hx,hy,hz,lx,ux,ly,uy,lz,uz,amp,J1direction-1);
-    
-  }
-  if(Jopt==2){
+  if(Jopt==1){
     char inputsrc[PETSC_MAX_PATH_LEN];
     PetscOptionsGetString(PETSC_NULL,"-inputsrc",inputsrc,PETSC_MAX_PATH_LEN,&flg); MyCheckAndOutputChar(flg,inputsrc,"inputsrc","Input source current");
 
@@ -405,7 +374,7 @@ int main(int argc, char **argv)
     fclose(Jptf);
 
     ArrayToVec(Jdist,Jextra);
-    ierr = VecPointwiseMult(Jextra,Jextra,ej); CHKERRQ(ierr);
+    //ierr = VecPointwiseMult(Jextra,Jextra,ej); CHKERRQ(ierr);
     ierr = VecAXPY(Jextra,-1.0,J1); CHKERRQ(ierr);
 
     free(Jdist);
@@ -471,12 +440,7 @@ int main(int argc, char **argv)
 
   /*--------Setup Helmholtz filter---------*/
   PC pcH;
-  if(imposec4v==0){
-    GetH(PETSC_COMM_WORLD,&Hfilt,Mx,My,(Mzslab==0)?Mz:1,sH,nR,dimH,&kspH,&pcH);
-  }else{
-    GetH(PETSC_COMM_WORLD,&Hfilt,DegFree,1,1,sH,nR,dimH,&kspH,&pcH);
-  }
-
+  GetH(PETSC_COMM_WORLD,&Hfilt,Mx,My,(Mzslab==0)?Mz:1,sH,nR,dimH,&kspH,&pcH);
   //OutputMat(PETSC_COMM_WORLD, Hfilt, filenameComm,"Hfilt.m");
   ierr = PetscPrintf(PETSC_COMM_WORLD,"--------Setting up the Hfilt DONE!--------\n ");CHKERRQ(ierr);
   /*--------Setup Helmholtz filter DONE---------*/
@@ -489,7 +453,7 @@ int main(int argc, char **argv)
   /**/	if(threeDim){															/**/
   /**/		ierr = PetscPrintf(PETSC_COMM_WORLD,"--------Interpolation matrix A has been set up.--------\n ");CHKERRQ(ierr);	/**/
   /**/		Vec tmpepsSReal, tmpepsFReal;												/**/
-  /**/		ierr = MatCreateVecs(A,&tmpepsSReal, &tmpepsFReal); CHKERRQ(ierr);								/**/
+  /**/		ierr = MatCreateVecs(A,&tmpepsSReal, &tmpepsFReal); CHKERRQ(ierr);							/**/
   /**/																	/**/
   /**/		double *tmpepsopt;													/**/
   /**/		FILE *tmpptf;														/**/
@@ -547,660 +511,142 @@ int main(int argc, char **argv)
   	ierr=VecPointwiseMult(epsFReal,epsFReal,epsI); CHKERRQ(ierr);							
   	ierr = VecAXPY(epsFReal,1.0,epsmedium1); CHKERRQ(ierr);								
   	OutputVec(PETSC_COMM_WORLD, epsFReal, "initial_","epsF.m");
-	
-	if(imposec4v){
-	  Vec tmp;
-	  ierr = MatCreateVecs(A2,&tmp, &epsSquare); CHKERRQ(ierr);
-	  ierr = MatMult(A2,epsSReal,epsSquare); CHKERRQ(ierr);
-	  OutputVec(PETSC_COMM_WORLD, epsSquare, "c4veps",".m");
-	  OutputMat(PETSC_COMM_WORLD, A2, "c4vMatrix",".m");
-	  VecDestroy(&tmp);
-	}
-
 /*-------------------------------------------------------------------------*/
 
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"--------We proceed to Job.--------\n ");CHKERRQ(ierr);
 
   int Job;
-  PetscOptionsGetInt(PETSC_NULL,"-Job",&Job,&flg); MyCheckAndOutputInt(flg,Job,"Job","Job (1 direct obj [SHG, singleldos, alpha, FOM, lens] ; 2 minimax ; 3 gradient check [SHG, singleldos, alpha, ldosconstr, FOM, lens])");
-
-  LDOSdataGroup ldos1data = {omega1, M1, A, x1, b1, weightedJ1, epspmlQ1, epsmedium1, epsI,  &its1, epscoef1, vgrad, ksp1};
-    
-  /*========for lens optimization=======*/
-  Mat Diff;
-  Vec VecFocalpt,Vecgrad1;
-  VecDuplicate(vR,&VecFocalpt);
-  VecDuplicate(epsSReal,&Vecgrad1);
-  int focalix, focaliy, focaliz, focalic1, focalic2;
-  int Diffc1=-1, Diffp=-1, Diffc2=-1;
-  PetscOptionsGetInt(PETSC_NULL,"-focalix",&focalix,&flg); 
-  if(!flg){ focalix=-1, focaliy=0, focaliz=0, focalic1=0, focalic2=0;}
-  if(flg) PetscPrintf(PETSC_COMM_WORLD,"-----focalix is %d \n", focalix);
-  PetscOptionsGetInt(PETSC_NULL,"-focaliy",&focaliy,&flg); 
-  if(flg) PetscPrintf(PETSC_COMM_WORLD,"-----focaliy is %d \n", focaliy);
-  PetscOptionsGetInt(PETSC_NULL,"-focaliz",&focaliz,&flg); 
-  if(flg) PetscPrintf(PETSC_COMM_WORLD,"-----focaliz is %d \n", focaliz);
-  PetscOptionsGetInt(PETSC_NULL,"-focalic1",&focalic1,&flg); 
-  if(flg) PetscPrintf(PETSC_COMM_WORLD,"-----focalic1 is %d \n", focalic1);
-  PetscOptionsGetInt(PETSC_NULL,"-focalic2",&focalic2,&flg); 
-  if(flg) PetscPrintf(PETSC_COMM_WORLD,"-----focalic2 is %d \n", focalic2);
-  PetscOptionsGetInt(PETSC_NULL,"-Diffc1",&Diffc1,&flg);
-  PetscOptionsGetInt(PETSC_NULL,"-Diffp", &Diffp, &flg);
-  PetscOptionsGetInt(PETSC_NULL,"-Diffc2",&Diffc2,&flg);
-
-  PetscPrintf(PETSC_COMM_WORLD,"----We will use Diff(%d,%d,%d) for E.Diff.E in lens optimization. \n", Diffc2, Diffp, Diffc1);
-
-  if(focalix<0)
-    VecSet(VecFocalpt,0.0);
-  else
-    MakeVecFocalpt(VecFocalpt, Nx, Ny, Nz, focalix, focaliy, focaliz, focalic1, focalic2);
-  LensGroup lensdata = {Nx,Ny,Nz,hxyz,omega1,ksp1,&its1,M1,b1,x1,VecFocalpt,epsSReal,epsFReal,epsI,epsmedium1,epspmlQ1,epscoef1,Vecgrad1,outputbase,PETSC_NULL};
-  if(Diffc1>=0 && Diffp>=0 && Diffc2>=0){
-    firstorderDeriv(PETSC_COMM_WORLD, &Diff, Nx, Ny, Nz, (Diffp==0)*hx + (Diffp==1)*hy + (Diffp==2)*hz, Diffc2, Diffp, Diffc1);
-    lensdata.Diff=Diff;
-  }
-
-  /*========for lens optimization=========*/
-
-if (Job==1){
-
-  PetscPrintf(PETSC_COMM_WORLD,"-----------Begin setting up the optimization problem.-----\n"); 
-  int optjob;
-  PetscOptionsGetInt(PETSC_NULL,"-optjob",&optjob,&flg);  MyCheckAndOutputInt(flg,optjob,"optjob","Job option (1 SHG, 2 Single freq, 3 Alpha, 4 FOM, 5 Lens)");
-
-  int optrho;
-  PetscOptionsGetInt(PETSC_NULL,"-optrho",&optrho,&flg);
-  if(!flg) optrho=0;
-  PetscPrintf(PETSC_COMM_WORLD,"optrho is %d \n", optrho);
-  PetscOptionsGetReal(PETSC_NULL,"-rho",&rho,&flg);
-  PetscPrintf(PETSC_COMM_WORLD,"material fraction rho is %0.16e \n", rho);
+  PetscOptionsGetInt(PETSC_NULL,"-Job",&Job,&flg); MyCheckAndOutputInt(flg,Job,"Job","Job (1 direct obj [SHG, singleldos, alpha, FOM, lens] ; 2 minimax ; 3 gradient check [SHG, singleldos, alpha, ldosconstr, FOM, lens])"); 
   
-
-  /*---------Optimization--------*/
-  double mylb=0, myub=1.0, *lb=NULL, *ub=NULL;
-  int maxeval, maxtime, mynloptalg;
-  double maxf;
-  nlopt_opt  opt;
-  int mynloptlocalalg;
-  nlopt_opt local_opt;
-  nlopt_result result;
-
-  PetscOptionsGetInt(PETSC_NULL,"-maxeval",&maxeval,&flg);  MyCheckAndOutputInt(flg,maxeval,"maxeval","max number of evaluation");
-  PetscOptionsGetInt(PETSC_NULL,"-maxtime",&maxtime,&flg);  MyCheckAndOutputInt(flg,maxtime,"maxtime","max time of evaluation");
-  PetscOptionsGetInt(PETSC_NULL,"-mynloptalg",&mynloptalg,&flg);  MyCheckAndOutputInt(flg,mynloptalg,"mynloptalg","The algorithm used ");
-  PetscOptionsGetInt(PETSC_NULL,"-mynloptlocalalg",&mynloptlocalalg,&flg);  MyCheckAndOutputInt(flg,mynloptlocalalg,"mynloptlocalalg","The local optimization algorithm used ");
-
-  lb = (double *) malloc(DegFree*sizeof(double));
-  ub = (double *) malloc(DegFree*sizeof(double));
-  if(!readlubsfromfile) {
-    for(i=0;i<DegFree;i++)
-      {
-        lb[i] = mylb;
-        ub[i] = myub;
-      }
-  }else {
-    char lbfile[PETSC_MAX_PATH_LEN], ubfile[PETSC_MAX_PATH_LEN];
-    PetscOptionsGetString(PETSC_NULL,"-lbfile",lbfile,PETSC_MAX_PATH_LEN,&flg); MyCheckAndOutputChar(flg,lbfile,"lbfile","Lower-bound file");
-    PetscOptionsGetString(PETSC_NULL,"-ubfile",ubfile,PETSC_MAX_PATH_LEN,&flg); MyCheckAndOutputChar(flg,ubfile,"ubfile","Upper-bound file");
-    ptf = fopen(lbfile,"r");
-    for (i=0;i<DegFree;i++)
-      { 
-        fscanf(ptf,"%lf",&lb[i]);
-      }
-    fclose(ptf);
-
-    ptf = fopen(ubfile,"r");
-    for (i=0;i<DegFree;i++)
-      { 
-        fscanf(ptf,"%lf",&ub[i]);
-      }
-    fclose(ptf);
-
-  }
-
-  opt = nlopt_create(mynloptalg, DegFree);
-  nlopt_set_lower_bounds(opt,lb);
-  nlopt_set_upper_bounds(opt,ub);
-  nlopt_set_maxeval(opt,maxeval);
-  nlopt_set_maxtime(opt,maxtime);
-  if (mynloptalg==11) nlopt_set_vector_storage(opt,4000);
-  if (mynloptlocalalg)
-    { 
-	PetscPrintf(PETSC_COMM_WORLD,"-----------Running with a local optimizer.---------\n"); 
-	local_opt=nlopt_create(mynloptlocalalg,DegFree);
-	nlopt_set_ftol_rel(local_opt, 1e-14);
-	nlopt_set_maxeval(local_opt,100000);
-	nlopt_set_local_optimizer(opt,local_opt);
-    }
-
-  if(optrho) nlopt_add_inequality_constraint(opt,materialfraction, NULL,1e-8);
-
-  double minLDOS1=0;
-  PetscOptionsGetReal(PETSC_NULL,"-minLDOS1",&minLDOS1,&flg);
-  if (minLDOS1 > 0.1) nlopt_add_inequality_constraint(opt,minLDOS, &minLDOS1, 1e-8);
-
-  if (optjob==1){
-    if (minapproach)
-      nlopt_set_min_objective(opt,filteroverlap,NULL);
-    else
-      nlopt_set_max_objective(opt,filteroverlap,NULL);
-  }
-  else if (optjob==2){
-    PetscPrintf(PETSC_COMM_WORLD,"==========************!!!!!!!!!!omega1 debug check is %g *********======\n",omega1);
-    nlopt_set_max_objective(opt,ldoskonly,&ldos1data);
-  }
-  else if (optjob==3){
-    nlopt_set_max_objective(opt,alpha,NULL);
-  }
-  else if (optjob==4){
-
-    PetscOptionsGetReal(PETSC_NULL,"-ldospowerindex",&ldospowerindex,&flg);
-    if(!flg) ldospowerindex=2.0;
-    PetscPrintf(PETSC_COMM_WORLD,"---------ldospowerindex is %g \n",ldospowerindex);
-
-    nlopt_set_max_objective(opt,FOM,NULL);
- 
-  }
-  else{
-    nlopt_set_max_objective(opt,optfocalpt,&lensdata);
-  }
-
-  result = nlopt_optimize(opt,epsopt,&maxf);			//********************optimization here!********************//
-
-  if (result < 0) 
-    PetscPrintf(PETSC_COMM_WORLD,"nlopt failed! \n", result);
-  else 
-    PetscPrintf(PETSC_COMM_WORLD,"found extremum  %0.16e\n", minapproach?1.0/maxf:maxf); 
-
-  PetscPrintf(PETSC_COMM_WORLD,"nlopt returned value is %d \n", result);
-
-  free(lb);
-  free(ub);
-  nlopt_destroy(opt);
-
-  int rankA;
-  MPI_Comm_rank(PETSC_COMM_WORLD, &rankA);
-
-  if(rankA==0)
-    {
-      ptf = fopen(strcat(filenameComm,"epsopt.txt"),"w");
-        for (i=0;i<DegFree;i++)
-          fprintf(ptf,"%0.16e \n",epsopt[i]);
-	  fclose(ptf);
-    } 
-
-}
-
-  /*--------------Minimax optimization---------*/
- if (Job==2){
-
-  VecCopy(J1,J2);
-  ierr = MatMult(D,J2,b2); CHKERRQ(ierr);
-  VecScale(b2,omega2);  
-  ierr = VecPointwiseMult(weightedJ2,J2,weight); CHKERRQ(ierr);
-  PetscPrintf(PETSC_COMM_WORLD,"-----------Optimizing max[min[LDOS1,LDOS2]].-----\n"); 
-
-  double dummyt;
-  double mylb=0,myub=1.0, *lb=NULL, *ub=NULL;
-  int maxeval, maxtime, mynloptalg;
-  double maxf;
-  nlopt_opt  opt;
-  nlopt_result result;
-  int mynloptlocalalg;
-  nlopt_opt local_opt;
-
-  PetscOptionsGetReal(PETSC_NULL,"-scaleldos2",&scaleldos2,&flg);  
-  if(!flg) scaleldos2=1.0;
-  if(flg) MyCheckAndOutputDouble(flg,scaleldos2,"scaleldos2","scaleldos2");
-  PetscOptionsGetReal(PETSC_NULL,"-dummyt",&dummyt,&flg);  MyCheckAndOutputDouble(flg,dummyt,"dummyt","Initial value of dummy variable t");
-  PetscOptionsGetInt(PETSC_NULL,"-maxeval",&maxeval,&flg);  MyCheckAndOutputInt(flg,maxeval,"maxeval","max number of evaluation");
-  PetscOptionsGetInt(PETSC_NULL,"-maxtime",&maxtime,&flg);  MyCheckAndOutputInt(flg,maxtime,"maxtime","max time of evaluation");
-  PetscOptionsGetInt(PETSC_NULL,"-mynloptalg",&mynloptalg,&flg);  MyCheckAndOutputInt(flg,mynloptalg,"mynloptalg","The algorithm used ");
-  PetscOptionsGetInt(PETSC_NULL,"-mynloptlocalalg",&mynloptlocalalg,&flg);  MyCheckAndOutputInt(flg,mynloptlocalalg,"mynloptlocalalg","The local optimization algorithm used ");
-
-  int DegFreeAll=DegFree+1;
-  double *epsoptAll;
-  epsoptAll = (double *) malloc(DegFreeAll*sizeof(double));
-  for (i=0;i<DegFree;i++) { epsoptAll[i]=epsopt[i]; }
-  epsoptAll[DegFreeAll-1]=dummyt;
- 
-  lb = (double *) malloc(DegFreeAll*sizeof(double));
-  ub = (double *) malloc(DegFreeAll*sizeof(double));
-  for(i=0;i<DegFree;i++)
-  {
-    lb[i] = mylb;
-    ub[i] = myub;
-  }
-  lb[DegFreeAll-1]=0;
-  ub[DegFreeAll-1]=1.0/0.0;
-
-  opt = nlopt_create(mynloptalg, DegFreeAll);
-  nlopt_set_lower_bounds(opt,lb);
-  nlopt_set_upper_bounds(opt,ub);
-  nlopt_set_maxeval(opt,maxeval);
-  nlopt_set_maxtime(opt,maxtime);
-  if (mynloptalg==11)
-  {
-    nlopt_set_vector_storage(opt,4000);
-  }
-  if (mynloptlocalalg)
-  { 
-	PetscPrintf(PETSC_COMM_WORLD,"-----------Running with a local optimizer.-----\n"); 
-	local_opt=nlopt_create(mynloptlocalalg,DegFreeAll);
-	nlopt_set_ftol_rel(local_opt, 1e-14);
-	nlopt_set_maxeval(local_opt,100000);
-	nlopt_set_local_optimizer(opt,local_opt);
-  }
-
-  LDOSdataGroup ldos2data = {omega2, M2, A, x2, b2, weightedJ2, epspmlQ2, epsmedium2, epsII, &its2, epscoef2, vgrad, ksp2};
-
-  nlopt_add_inequality_constraint(opt,ldosconstraint, &ldos1data, 1e-8);
-  nlopt_add_inequality_constraint(opt,ldosconstraint, &ldos2data, 1e-8);
-
-  nlopt_set_max_objective(opt,maxminobjfun,NULL);   
-
-  result = nlopt_optimize(opt,epsoptAll,&maxf);	
-
-  PetscPrintf(PETSC_COMM_WORLD,"nlopt failed! \n", result);
-
-  PetscPrintf(PETSC_COMM_WORLD,"nlopt returned value is %d \n", result);
-
-  free(epsoptAll);
-  free(lb);
-  free(ub);
-  nlopt_destroy(opt);
-
-  int rankA;
-  MPI_Comm_rank(PETSC_COMM_WORLD, &rankA);
-
-  if(rankA==0)
-    {
-      ptf = fopen(strcat(filenameComm,"epsopt.txt"),"w");
-        for (i=0;i<DegFree;i++)
-          fprintf(ptf,"%0.16e \n",epsoptAll[i]);
-	  fclose(ptf);
-    }
-
-}
-
-if (Job==3){
+  //LDOSdataGroup ldos1data = {omega1, M1, A, x1, b1, weightedJ1, epspmlQ1, epsmedium1, epsI,  &its1, epscoef1, vgrad, ksp1};
+    
+if (Job==1){
 
   /*---------Calculate the overlap and gradient--------*/
   int px, py, pz=0;
   double beta=0;
   double s1, ds, s2, epscen;
-  int optjob;
   
   PetscOptionsGetInt(PETSC_NULL,"-px",&px,&flg);  MyCheckAndOutputInt(flg,px,"px","px");
   PetscOptionsGetInt(PETSC_NULL,"-py",&py,&flg);  MyCheckAndOutputInt(flg,py,"py","py");
   PetscOptionsGetReal(PETSC_NULL,"-s1",&s1,&flg); MyCheckAndOutputDouble(flg,s1,"s1","s1");
   PetscOptionsGetReal(PETSC_NULL,"-s2",&s2,&flg); MyCheckAndOutputDouble(flg,s2,"s2","s2");
   PetscOptionsGetReal(PETSC_NULL,"-ds",&ds,&flg); MyCheckAndOutputDouble(flg,ds,"ds","ds");
-  PetscOptionsGetInt(PETSC_NULL,"-optjob",&optjob,&flg);  MyCheckAndOutputInt(flg,optjob,"optjob","Job option (1 SHG, 2 Single freq, 3 Alpha, 4 LDOSconstr, 5 FOM, 6 Lens)");
 
   int posMj=(px*My+ py)*Mz + pz;
   for (epscen=s1;epscen<s2;epscen+=ds)
   { 
       epsopt[posMj]=epscen; 
-      if (optjob==1){
-	beta = filteroverlap(DegFree,epsopt,grad,NULL);}
-      else if (optjob==2){
-	beta = ldoskonly(DegFree,epsopt,grad,&ldos1data);}
-      else if (optjob==3){
-	beta = alpha(DegFree,epsopt,grad,NULL);}
-      else if (optjob==4){
-	double ldosmin=100;
-	beta = minLDOS(DegFree,epsopt,grad,&ldosmin);}
-      else if (optjob==5){
-	PetscOptionsGetReal(PETSC_NULL,"-ldospowerindex",&ldospowerindex,&flg);
-	if(!flg) ldospowerindex=2.0;
-	PetscPrintf(PETSC_COMM_WORLD,"---------ldospowerindex is %g \n",ldospowerindex);
-	beta = FOM(DegFree,epsopt,grad,NULL);}
-      else{
-	beta = optfocalpt(DegFree,epsopt,grad,&lensdata);
-      }
+      PetscOptionsGetReal(PETSC_NULL,"-ldospowerindex",&ldospowerindex,&flg);
+      if(!flg) ldospowerindex=2.0;
+      PetscPrintf(PETSC_COMM_WORLD,"---------ldospowerindex is %g \n",ldospowerindex);
+      THGdataGroup thgdata={epsSReal,epsFReal,M1,x1,weightedJ1,b1,ej,epsI,epspmlQ1,epsmedium1,epscoef1,omega1,M2,epsII,epspmlQ2,epsmedium2,epscoef2,omega2,ksp1,ksp2,ldospowerindex,outputbase};
+
+      beta = thgfom_arbitraryPol(DegFree,epsopt,grad,&thgdata);
+      
       PetscPrintf(PETSC_COMM_WORLD,"epscen: %g objfunc: %g objfunc-grad: %g \n", epsopt[posMj], beta, grad[posMj]);
   }
 
 
-}
+ }
+ 
+ if (Job==2){
 
-//Job = 4 for multiple degenerate mode minimax optimization
+   PetscPrintf(PETSC_COMM_WORLD,"-----------Begin setting up the optimization problem for THG.-----\n");
 
-if (Job==4){
+   /*---------Optimization--------*/
+   double mylb=0, myub=1.0, *lb=NULL, *ub=NULL;
+   int maxeval, maxtime, mynloptalg;
+   double maxf;
+   nlopt_opt  opt;
+   int mynloptlocalalg;
+   nlopt_opt local_opt;
+   nlopt_result result;
 
-  //read the bc's for the third mode and set up the third matrix
-  //we can just use the muinv1 and epspmlQ1 for all the matrices since freqs and Qabs are the same
-  //also set up the ksp3, ksp4, ksp5, ksp6
+   PetscOptionsGetInt(PETSC_NULL,"-maxeval",&maxeval,&flg);  MyCheckAndOutputInt(flg,maxeval,"maxeval","max number of evaluation");
+   PetscOptionsGetInt(PETSC_NULL,"-maxtime",&maxtime,&flg);  MyCheckAndOutputInt(flg,maxtime,"maxtime","max time of evaluation");
+   PetscOptionsGetInt(PETSC_NULL,"-mynloptalg",&mynloptalg,&flg);  MyCheckAndOutputInt(flg,mynloptalg,"mynloptalg","The algorithm used ");
+   PetscOptionsGetInt(PETSC_NULL,"-mynloptlocalalg",&mynloptlocalalg,&flg);  MyCheckAndOutputInt(flg,mynloptlocalalg,"mynloptlocalalg","The local optimization algorithm used ");
 
-  Vec epspmlQ,epsmedium,epsDiff,epscoef;
-  Mat M3,M4,M5,M6;
-  Vec x3,J3,weightedJ3,b3;
-  Vec x4,J4,weightedJ4,b4;
-  Vec x5,J5,weightedJ5,b5;
-  Vec x6,J6,weightedJ6,b6;
-  double *muinv;
-  double omega;
-  KSP ksp3, ksp4, ksp5, ksp6;
-  PC pc3, pc4, pc5, pc6;
-  int its3=100, its4=100, its5=100, its6=100;
-  
-  VecDuplicate(vR,&epspmlQ);
-  VecDuplicate(vR,&epsmedium);
-  VecDuplicate(vR,&epsDiff);
-  VecDuplicate(vR,&epscoef);
-  VecDuplicate(vR,&x3);
-  VecDuplicate(vR,&J3);
-  VecDuplicate(vR,&weightedJ3);
-  VecDuplicate(vR,&b3);
-  VecDuplicate(vR,&x4);
-  VecDuplicate(vR,&J4);
-  VecDuplicate(vR,&weightedJ4);
-  VecDuplicate(vR,&b4);
-  VecDuplicate(vR,&x5);
-  VecDuplicate(vR,&J5);
-  VecDuplicate(vR,&weightedJ5);
-  VecDuplicate(vR,&b5);
-  VecDuplicate(vR,&x6);
-  VecDuplicate(vR,&J6);
-  VecDuplicate(vR,&weightedJ6);
-  VecDuplicate(vR,&b6);
+   lb = (double *) malloc(DegFree*sizeof(double));
+   ub = (double *) malloc(DegFree*sizeof(double));
+   if(!readlubsfromfile) {
+     for(i=0;i<DegFree;i++)
+       {
+	 lb[i] = mylb;
+	 ub[i] = myub;
+       }
+   }else {
+     char lbfile[PETSC_MAX_PATH_LEN], ubfile[PETSC_MAX_PATH_LEN];
+     PetscOptionsGetString(PETSC_NULL,"-lbfile",lbfile,PETSC_MAX_PATH_LEN,&flg); MyCheckAndOutputChar(flg,lbfile,"lbfile","Lower-bound file");
+     PetscOptionsGetString(PETSC_NULL,"-ubfile",ubfile,PETSC_MAX_PATH_LEN,&flg); MyCheckAndOutputChar(flg,ubfile,"ubfile","Upper-bound file");
+     ptf = fopen(lbfile,"r");
+     for (i=0;i<DegFree;i++)
+       { 
+	 fscanf(ptf,"%lf",&lb[i]);
+       }
+     fclose(ptf);
+     
+     ptf = fopen(ubfile,"r");
+     for (i=0;i<DegFree;i++)
+       { 
+	 fscanf(ptf,"%lf",&ub[i]);
+       }
+     fclose(ptf);
+     
+   }
 
-  VecCopy(epspmlQ1,epspmlQ);
-  VecCopy(epsmedium1,epsmedium);
-  VecCopy(epsI,epsDiff);
-  VecCopy(epscoef1,epscoef);
-  muinv = (double *) malloc(sizeof(double)*6*Nxyz);
-  AddMuAbsorption(muinv, muinvpml1, Qabs, add);
-  omega=omega1;
-  setupKSP(PETSC_COMM_WORLD,&ksp3,&pc3,solver,iteronly);
-  setupKSP(PETSC_COMM_WORLD,&ksp4,&pc4,solver,iteronly);
-  setupKSP(PETSC_COMM_WORLD,&ksp5,&pc5,solver,iteronly);
-  setupKSP(PETSC_COMM_WORLD,&ksp6,&pc6,solver,iteronly);
+   opt = nlopt_create(mynloptalg, DegFree);
+   nlopt_set_lower_bounds(opt,lb);
+   nlopt_set_upper_bounds(opt,ub);
+   nlopt_set_maxeval(opt,maxeval);
+   nlopt_set_maxtime(opt,maxtime);
+   if (mynloptalg==11) nlopt_set_vector_storage(opt,4000);
+   if (mynloptlocalalg)
+     {
+       PetscPrintf(PETSC_COMM_WORLD,"-----------Running with a local optimizer.---------\n");
+       local_opt=nlopt_create(mynloptlocalalg,DegFree);
+       nlopt_set_ftol_rel(local_opt, 1e-14);
+       nlopt_set_maxeval(local_opt,100000);
+       nlopt_set_local_optimizer(opt,local_opt);
+     }
 
-  int b3x[2], b3y[2], b3z[2];
-  PetscOptionsGetInt(PETSC_NULL,"-b3xl",b3x,&flg);    MyCheckAndOutputInt(flg,b3x[0],"b3xl","BC at x lower for mode 3");
-  PetscOptionsGetInt(PETSC_NULL,"-b3xu",b3x+1,&flg);  MyCheckAndOutputInt(flg,b3x[1],"b3xu","BC at x upper for mode 3");
-  PetscOptionsGetInt(PETSC_NULL,"-b3yl",b3y,&flg);    MyCheckAndOutputInt(flg,b3y[0],"b3yl","BC at y lower for mode 3");
-  PetscOptionsGetInt(PETSC_NULL,"-b3yu",b3y+1,&flg);  MyCheckAndOutputInt(flg,b3y[1],"b3yu","BC at y upper for mode 3");
-  PetscOptionsGetInt(PETSC_NULL,"-b3zl",b3z,&flg);    MyCheckAndOutputInt(flg,b3z[0],"b3zl","BC at z lower for mode 3");
-  PetscOptionsGetInt(PETSC_NULL,"-b3zu",b3z+1,&flg);  MyCheckAndOutputInt(flg,b3z[1],"b3zu","BC at z upper for mode 3");
+   PetscOptionsGetReal(PETSC_NULL,"-ldospowerindex",&ldospowerindex,&flg);
+   if(!flg) ldospowerindex=2.0;
+   PetscPrintf(PETSC_COMM_WORLD,"---------ldospowerindex is %g \n",ldospowerindex);
 
-  int b4x[2], b4y[2], b4z[2];
-  PetscOptionsGetInt(PETSC_NULL,"-b4xl",b4x,&flg);    MyCheckAndOutputInt(flg,b4x[0],"b4xl","BC at x lower for mode 4");
-  PetscOptionsGetInt(PETSC_NULL,"-b4xu",b4x+1,&flg);  MyCheckAndOutputInt(flg,b4x[1],"b4xu","BC at x upper for mode 4");
-  PetscOptionsGetInt(PETSC_NULL,"-b4yl",b4y,&flg);    MyCheckAndOutputInt(flg,b4y[0],"b4yl","BC at y lower for mode 4");
-  PetscOptionsGetInt(PETSC_NULL,"-b4yu",b4y+1,&flg);  MyCheckAndOutputInt(flg,b4y[1],"b4yu","BC at y upper for mode 4");
-  PetscOptionsGetInt(PETSC_NULL,"-b4zl",b4z,&flg);    MyCheckAndOutputInt(flg,b4z[0],"b4zl","BC at z lower for mode 4");
-  PetscOptionsGetInt(PETSC_NULL,"-b4zu",b4z+1,&flg);  MyCheckAndOutputInt(flg,b4z[1],"b4zu","BC at z upper for mode 4");
+   THGdataGroup thgdata={epsSReal,epsFReal,M1,x1,weightedJ1,b1,ej,epsI,epspmlQ1,epsmedium1,epscoef1,omega1,M2,epsII,epspmlQ2,epsmedium2,epscoef2,omega2,ksp1,ksp2,ldospowerindex,outputbase};
+   PetscPrintf(PETSC_COMM_WORLD,"---------About to embark THG optimization. No minimum approach %d ....\n", minapproach);
+   nlopt_set_max_objective(opt,thgfom_arbitraryPol,&thgdata);
+   
+   PetscPrintf(PETSC_COMM_WORLD,"---------Optimization about to occur. \n");
+   result = nlopt_optimize(opt,epsopt,&maxf);    //********************optimization here!********************//
 
-  int b5x[2], b5y[2], b5z[2];
-  PetscOptionsGetInt(PETSC_NULL,"-b5xl",b5x,&flg);    MyCheckAndOutputInt(flg,b5x[0],"b5xl","BC at x lower for mode 5");
-  PetscOptionsGetInt(PETSC_NULL,"-b5xu",b5x+1,&flg);  MyCheckAndOutputInt(flg,b5x[1],"b5xu","BC at x upper for mode 5");
-  PetscOptionsGetInt(PETSC_NULL,"-b5yl",b5y,&flg);    MyCheckAndOutputInt(flg,b5y[0],"b5yl","BC at y lower for mode 5");
-  PetscOptionsGetInt(PETSC_NULL,"-b5yu",b5y+1,&flg);  MyCheckAndOutputInt(flg,b5y[1],"b5yu","BC at y upper for mode 5");
-  PetscOptionsGetInt(PETSC_NULL,"-b5zl",b5z,&flg);    MyCheckAndOutputInt(flg,b5z[0],"b5zl","BC at z lower for mode 5");
-  PetscOptionsGetInt(PETSC_NULL,"-b5zu",b5z+1,&flg);  MyCheckAndOutputInt(flg,b5z[1],"b5zu","BC at z upper for mode 5");
+   if (result < 0)
+     PetscPrintf(PETSC_COMM_WORLD,"nlopt failed! \n", result);
+   else
+     PetscPrintf(PETSC_COMM_WORLD,"found extremum  %0.16e\n", minapproach?1.0/maxf:maxf);
 
-  int b6x[2], b6y[2], b6z[2];
-  PetscOptionsGetInt(PETSC_NULL,"-b6xl",b6x,&flg);    MyCheckAndOutputInt(flg,b6x[0],"b6xl","BC at x lower for mode 6");
-  PetscOptionsGetInt(PETSC_NULL,"-b6xu",b6x+1,&flg);  MyCheckAndOutputInt(flg,b6x[1],"b6xu","BC at x upper for mode 6");
-  PetscOptionsGetInt(PETSC_NULL,"-b6yl",b6y,&flg);    MyCheckAndOutputInt(flg,b6y[0],"b6yl","BC at y lower for mode 6");
-  PetscOptionsGetInt(PETSC_NULL,"-b6yu",b6y+1,&flg);  MyCheckAndOutputInt(flg,b6y[1],"b6yu","BC at y upper for mode 6");
-  PetscOptionsGetInt(PETSC_NULL,"-b6zl",b6z,&flg);    MyCheckAndOutputInt(flg,b6z[0],"b6zl","BC at z lower for mode 6");
-  PetscOptionsGetInt(PETSC_NULL,"-b6zu",b6z+1,&flg);  MyCheckAndOutputInt(flg,b6z[1],"b6zu","BC at z upper for mode 6");
+   PetscPrintf(PETSC_COMM_WORLD,"nlopt returned value is %d \n", result);
 
+   free(lb);
+   free(ub);
+   nlopt_destroy(opt);
 
-  MoperatorGeneral(PETSC_COMM_WORLD, &M1, Nx,Ny,Nz, hx,hy,hz, b1x,b1y,b1z, muinv, BCPeriod);
-  MoperatorGeneral(PETSC_COMM_WORLD, &M2, Nx,Ny,Nz, hx,hy,hz, b2x,b2y,b2z, muinv, BCPeriod);
-  MoperatorGeneral(PETSC_COMM_WORLD, &M3, Nx,Ny,Nz, hx,hy,hz, b3x,b3y,b3z, muinv, BCPeriod);
-  MoperatorGeneral(PETSC_COMM_WORLD, &M4, Nx,Ny,Nz, hx,hy,hz, b4x,b4y,b4z, muinv, BCPeriod);
-  MoperatorGeneral(PETSC_COMM_WORLD, &M5, Nx,Ny,Nz, hx,hy,hz, b5x,b5y,b5z, muinv, BCPeriod);
-  MoperatorGeneral(PETSC_COMM_WORLD, &M6, Nx,Ny,Nz, hx,hy,hz, b6x,b6y,b6z, muinv, BCPeriod);
+   int rankA;
+   MPI_Comm_rank(PETSC_COMM_WORLD, &rankA);
 
+   if(rankA==0)
+     {
+       ptf = fopen(strcat(filenameComm,"epsopt.txt"),"w");
+       for (i=0;i<DegFree;i++)
+	 fprintf(ptf,"%0.16e \n",epsopt[i]);
+       fclose(ptf);
+     }
 
-  //Read the J's from input;
-  VecSet(J1,0.0);
-  VecSet(J2,0.0);
-  VecSet(J3,0.0);
-  VecSet(J4,0.0);
-  VecSet(J5,0.0);
-  VecSet(J6,0.0);
-  double *J1array,*J2array,*J3array,*J4array,*J5array,*J6array;
-  FILE *J1ptf,*J2ptf,*J3ptf,*J4ptf,*J5ptf,*J6ptf;
-  J1array = (double *) malloc(6*Nxyz*sizeof(double));
-  J2array = (double *) malloc(6*Nxyz*sizeof(double));
-  J3array = (double *) malloc(6*Nxyz*sizeof(double));
-  J4array = (double *) malloc(6*Nxyz*sizeof(double));
-  J5array = (double *) malloc(6*Nxyz*sizeof(double));
-  J6array = (double *) malloc(6*Nxyz*sizeof(double));
-  J1ptf = fopen("J1input.txt","r");
-  J2ptf = fopen("J2input.txt","r");
-  J3ptf = fopen("J3input.txt","r"); 
-  J4ptf = fopen("J4input.txt","r"); 
-  J5ptf = fopen("J5input.txt","r"); 
-  J6ptf = fopen("J6input.txt","r"); 
-  int inJi;
-  PetscPrintf(PETSC_COMM_WORLD,"---reading J1, J2, J3, J4, J5 and J6-----\n");
-  for (inJi=0;inJi<6*Nxyz;inJi++)
-    { 
-      fscanf(J1ptf,"%lf",&J1array[inJi]);
-      fscanf(J2ptf,"%lf",&J2array[inJi]);
-      fscanf(J3ptf,"%lf",&J3array[inJi]);	
-      fscanf(J4ptf,"%lf",&J4array[inJi]);
-      fscanf(J5ptf,"%lf",&J5array[inJi]);
-      fscanf(J6ptf,"%lf",&J6array[inJi]);	
-    }
-  fclose(J1ptf);
-  fclose(J2ptf);
-  fclose(J3ptf);
-  fclose(J4ptf);
-  fclose(J5ptf);
-  fclose(J6ptf);
-  PetscPrintf(PETSC_COMM_WORLD,"---Done reading J2, J2, J3, J4, J5 and J6!-----\n");
+ }
 
-  ArrayToVec(J1array,J1);
-  ArrayToVec(J2array,J2);
-  ArrayToVec(J3array,J3);
-  ArrayToVec(J4array,J4);
-  ArrayToVec(J5array,J5);
-  ArrayToVec(J6array,J6);
-  free(J1array);
-  free(J2array);
-  free(J3array);
-  free(J4array);
-  free(J5array);
-  free(J6array);
-
-  OutputVec(PETSC_COMM_WORLD,J1,"J1",".m");
-  OutputVec(PETSC_COMM_WORLD,J2,"J2",".m");
-  OutputVec(PETSC_COMM_WORLD,J3,"J3",".m");
-  OutputVec(PETSC_COMM_WORLD,J4,"J4",".m");
-  OutputVec(PETSC_COMM_WORLD,J5,"J5",".m");
-  OutputVec(PETSC_COMM_WORLD,J6,"J6",".m");
-
-  VecPointwiseMult(weightedJ1,weight,J1);
-  VecPointwiseMult(weightedJ2,weight,J2);
-  VecPointwiseMult(weightedJ3,weight,J3);
-  VecPointwiseMult(weightedJ4,weight,J4);
-  VecPointwiseMult(weightedJ5,weight,J5);
-  VecPointwiseMult(weightedJ6,weight,J6);
-
-  MatMult(D,J1,b1);
-  VecScale(b1,omega);
-  MatMult(D,J2,b2);
-  VecScale(b2,omega);
-  MatMult(D,J3,b3);
-  VecScale(b3,omega);
-  MatMult(D,J4,b4);
-  VecScale(b4,omega);
-  MatMult(D,J5,b5);
-  VecScale(b5,omega);
-  MatMult(D,J6,b6);
-  VecScale(b6,omega);
-
-  LDOSdataGroup ldos2data={omega,M2,A,x2,b2,weightedJ2,epspmlQ,epsmedium,epsDiff,&its2,epscoef,vgrad,ksp2};
-  LDOSdataGroup ldos3data={omega,M3,A,x3,b3,weightedJ3,epspmlQ,epsmedium,epsDiff,&its3,epscoef,vgrad,ksp3};
-  LDOSdataGroup ldos4data={omega,M4,A,x4,b4,weightedJ4,epspmlQ,epsmedium,epsDiff,&its4,epscoef,vgrad,ksp4};
-  LDOSdataGroup ldos5data={omega,M5,A,x5,b5,weightedJ5,epspmlQ,epsmedium,epsDiff,&its5,epscoef,vgrad,ksp5};
-  LDOSdataGroup ldos6data={omega,M6,A,x6,b6,weightedJ6,epspmlQ,epsmedium,epsDiff,&its6,epscoef,vgrad,ksp6};
-
- /*---------Optimization--------*/
-  double tstart;
-  PetscOptionsGetReal(PETSC_NULL,"-tstart",&tstart,&flg);  MyCheckAndOutputDouble(flg,tstart,"tstart","Initial value of dummy variable t");
-  int DegFreeAll=DegFree+1;
-  double *epsoptAll;
-  epsoptAll = (double *) malloc(DegFreeAll*sizeof(double));
-  for (i=0;i<DegFree;i++){ epsoptAll[i]=epsopt[i]; }
-  epsoptAll[DegFreeAll-1]=tstart;
-  
-  int optrho;
-  PetscOptionsGetInt(PETSC_NULL,"-optrho",&optrho,&flg);
-  if(!flg) optrho=0;
-  PetscPrintf(PETSC_COMM_WORLD,"optrho is %d \n", optrho);
-  PetscOptionsGetReal(PETSC_NULL,"-rho",&rho,&flg);
-  PetscPrintf(PETSC_COMM_WORLD,"material fraction rho is %0.16e \n", rho);
-  
-  double mylb=0, myub=1.0, *lb=NULL, *ub=NULL;
-  int maxeval, maxtime, mynloptalg;
-  double maxf;
-  nlopt_opt  opt;
-  int mynloptlocalalg;
-  nlopt_opt local_opt;
-  nlopt_result result;
-
-  PetscOptionsGetInt(PETSC_NULL,"-maxeval",&maxeval,&flg);  MyCheckAndOutputInt(flg,maxeval,"maxeval","max number of evaluation");
-  PetscOptionsGetInt(PETSC_NULL,"-maxtime",&maxtime,&flg);  MyCheckAndOutputInt(flg,maxtime,"maxtime","max time of evaluation");
-  PetscOptionsGetInt(PETSC_NULL,"-mynloptalg",&mynloptalg,&flg);  MyCheckAndOutputInt(flg,mynloptalg,"mynloptalg","The algorithm used ");
-  PetscOptionsGetInt(PETSC_NULL,"-mynloptlocalalg",&mynloptlocalalg,&flg);  MyCheckAndOutputInt(flg,mynloptlocalalg,"mynloptlocalalg","The local optimization algorithm used ");
-
-  lb = (double *) malloc(DegFreeAll*sizeof(double));
-  ub = (double *) malloc(DegFreeAll*sizeof(double));
-  if(!readlubsfromfile) {
-    for(i=0;i<DegFree;i++)
-      {
-        lb[i] = mylb;
-        ub[i] = myub;
-      }
-  }else {
-    char lbfile[PETSC_MAX_PATH_LEN], ubfile[PETSC_MAX_PATH_LEN];
-    PetscOptionsGetString(PETSC_NULL,"-lbfile",lbfile,PETSC_MAX_PATH_LEN,&flg); MyCheckAndOutputChar(flg,lbfile,"lbfile","Lower-bound file");
-    PetscOptionsGetString(PETSC_NULL,"-ubfile",ubfile,PETSC_MAX_PATH_LEN,&flg); MyCheckAndOutputChar(flg,ubfile,"ubfile","Upper-bound file");
-    ptf = fopen(lbfile,"r");
-    for (i=0;i<DegFree;i++)
-      { 
-        fscanf(ptf,"%lf",&lb[i]);
-      }
-    fclose(ptf);
-
-    ptf = fopen(ubfile,"r");
-    for (i=0;i<DegFree;i++)
-      { 
-        fscanf(ptf,"%lf",&ub[i]);
-      }
-    fclose(ptf);
-
-  }
-  lb[DegFreeAll-1]=0;
-  ub[DegFreeAll-1]=1.0/0.0;
-
-  opt = nlopt_create(mynloptalg, DegFreeAll);
-  nlopt_set_lower_bounds(opt,lb);
-  nlopt_set_upper_bounds(opt,ub);
-  nlopt_set_maxeval(opt,maxeval);
-  nlopt_set_maxtime(opt,maxtime);
-  if (mynloptalg==11) nlopt_set_vector_storage(opt,4000);
-  if (mynloptlocalalg)
-    { 
-      PetscPrintf(PETSC_COMM_WORLD,"-----------Running with a local optimizer.---------\n"); 
-      local_opt=nlopt_create(mynloptlocalalg,DegFreeAll);
-      nlopt_set_ftol_rel(local_opt, 1e-14);
-      nlopt_set_maxeval(local_opt,100000);
-      nlopt_set_local_optimizer(opt,local_opt);
-    }
-
-  if(optrho) nlopt_add_inequality_constraint(opt,materialfraction, NULL,1e-8);
-
-  int nummodes;
-  PetscOptionsGetInt(PETSC_NULL,"-nummodes",&nummodes,&flg);  MyCheckAndOutputInt(flg,nummodes,"nummodes","number of degenerate modes to optimize");
-
-  if(nummodes==2){
-    nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos1data,1e-8);
-    nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos2data,1e-8);
-  }else if(nummodes==3){
-    nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos1data,1e-8);
-    nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos2data,1e-8);
-    nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos3data,1e-8);
-  }else if(nummodes==4){
-    nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos1data,1e-8);
-    nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos2data,1e-8);
-    nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos3data,1e-8);
-    nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos4data,1e-8);
-  }else if(nummodes==6){
-    nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos1data,1e-8);
-    nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos2data,1e-8);
-    nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos3data,1e-8);
-    nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos4data,1e-8);
-    nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos5data,1e-8);
-    nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos6data,1e-8);
-  }
-
-  nlopt_set_max_objective(opt,maxminobjfun,NULL);   
-
-  result = nlopt_optimize(opt,epsoptAll,&maxf);
-
-  PetscPrintf(PETSC_COMM_WORLD,"nlopt failed! \n", result);
-
-  PetscPrintf(PETSC_COMM_WORLD,"nlopt returned value is %d \n", result);
-
-  int rankA;
-  MPI_Comm_rank(PETSC_COMM_WORLD, &rankA);
-
-  if(rankA==0)
-    {
-      ptf = fopen(strcat(filenameComm,"epsopt.txt"),"w");
-      for (i=0;i<DegFree;i++)
-	fprintf(ptf,"%0.16e \n",epsoptAll[i]);
-      fclose(ptf);
-    }
-
-  free(epsoptAll);
-  free(lb);
-  free(ub);
-  nlopt_destroy(opt);
-
-  VecDestroy(&epspmlQ);
-  VecDestroy(&epsmedium);
-  VecDestroy(&epsDiff);
-  VecDestroy(&epscoef);
-  MatDestroy(&M3);
-  VecDestroy(&x3);
-  VecDestroy(&J3);
-  VecDestroy(&weightedJ3);
-  VecDestroy(&b3);
-  MatDestroy(&M4);
-  VecDestroy(&x4);
-  VecDestroy(&J4);
-  VecDestroy(&weightedJ4);
-  VecDestroy(&b4);
-  MatDestroy(&M5);
-  VecDestroy(&x5);
-  VecDestroy(&J5);
-  VecDestroy(&weightedJ5);
-  VecDestroy(&b5);
-  MatDestroy(&M6);
-  VecDestroy(&x6);
-  VecDestroy(&J6);
-  VecDestroy(&weightedJ6);
-  VecDestroy(&b6);
-  free(muinv);
-  KSPDestroy(&ksp3); 
-  KSPDestroy(&ksp4); 
-  KSPDestroy(&ksp5); 
-  KSPDestroy(&ksp6); 
-
-}
-
-
+ 
 /*------------------------------------------------*/
 /*------------------------------------------------*/
 /*------------------------------------------------*/
@@ -1217,8 +663,6 @@ if (Job==4){
   ierr = MatDestroy(&M1); CHKERRQ(ierr);  
   ierr = MatDestroy(&M2); CHKERRQ(ierr);
   ierr = MatDestroy(&Hfilt); CHKERRQ(ierr);
-
-  ierr = MatDestroy(&Diff); CHKERRQ(ierr);
 
   ierr = VecDestroy(&vR); CHKERRQ(ierr);
   ierr = VecDestroy(&weight); CHKERRQ(ierr);
@@ -1274,16 +718,9 @@ if (Job==4){
   ierr = VecDestroy(&Grad3); CHKERRQ(ierr);
   ierr = VecDestroy(&Grad4); CHKERRQ(ierr);
 
-  ierr = VecDestroy(&VecFocalpt); CHKERRQ(ierr);
-  ierr = VecDestroy(&Vecgrad1); CHKERRQ(ierr);
-
   ierr = KSPDestroy(&ksp1);CHKERRQ(ierr);
   ierr = KSPDestroy(&ksp2);CHKERRQ(ierr);
   ierr = KSPDestroy(&kspH);CHKERRQ(ierr);
-
-  MatDestroy(&A1);
-  MatDestroy(&A2);
-  VecDestroy(&epsSquare);
 
   ISDestroy(&from);
   ISDestroy(&to);

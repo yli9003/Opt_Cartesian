@@ -59,6 +59,31 @@ typedef struct{
   double multipurposescalar;
 } EPdataGroup;
 
+typedef struct{
+  Vec epsSReal;
+  Vec epsFReal;
+  Mat M1;
+  Vec x1;
+  Vec weightedJ1;
+  Vec b1;
+  Vec ej;
+  Vec epsI;
+  Vec epspmlQ1;
+  Vec epsmedium1;
+  Vec epscoef1;
+  double omega1;
+  Mat M3;
+  Vec epsIII;
+  Vec epspmlQ3;
+  Vec epsmedium3;
+  Vec epscoef3;
+  double omega3;
+  KSP ksp1;
+  KSP ksp2;
+  double ldospowerindex;
+  int outputbase;
+} THGdataGroup;
+
 // from MoperatorGeneral.c
 PetscErrorCode MoperatorGeneral(MPI_Comm comm, Mat *Mout, int Nx, int Ny, int Nz, double hx, double hy, double hz, int bx[2], int by[2], int bz[2], double *muinv,int DimPeriod);
 
@@ -194,6 +219,9 @@ double FOM(int DegFree,double *epsopt, double *grad, void *data);
 // from ldosconstraint.c
 double ldosconstraint(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
 
+// from ldoskconstraint.c
+double ldoskconstraint(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
+
 double maxminobjfun(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
 
 // from lens.c
@@ -211,3 +239,9 @@ double EPLDOS(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
 
 // from eigsolver.c
 int eigsolver(Mat M, Vec epsC, Mat D);
+
+// from thgfom_arbitraryPol.c
+double thgfom_arbitraryPol(int DegFree,double *epsopt, double *grad, void *data);
+
+// from ldoskonly.c
+double ldoskonly(int DegFree,double *epsopt, double *grad, void *data);

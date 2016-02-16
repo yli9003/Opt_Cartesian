@@ -686,7 +686,7 @@ if (Job==1){
   }
   else if (optjob==2){
     PetscPrintf(PETSC_COMM_WORLD,"==========************!!!!!!!!!!omega1 debug check is %g *********======\n",omega1);
-    nlopt_set_max_objective(opt,ldoskonly,&ldos1data);
+    nlopt_set_max_objective(opt,ldosonly,&ldos1data);
   }
   else if (optjob==3){
     nlopt_set_max_objective(opt,alpha,NULL);
@@ -844,7 +844,7 @@ if (Job==3){
       if (optjob==1){
 	beta = filteroverlap(DegFree,epsopt,grad,NULL);}
       else if (optjob==2){
-	beta = ldoskonly(DegFree,epsopt,grad,&ldos1data);}
+	beta = ldosonly(DegFree,epsopt,grad,&ldos1data);}
       else if (optjob==3){
 	beta = alpha(DegFree,epsopt,grad,NULL);}
       else if (optjob==4){
@@ -950,12 +950,12 @@ if (Job==4){
   PetscOptionsGetInt(PETSC_NULL,"-b6zu",b6z+1,&flg);  MyCheckAndOutputInt(flg,b6z[1],"b6zu","BC at z upper for mode 6");
 
 
-  MoperatorGeneral(PETSC_COMM_WORLD, &M1, Nx,Ny,Nz, hx,hy,hz, b1x,b1y,b1z, muinv, BCPeriod);
-  MoperatorGeneral(PETSC_COMM_WORLD, &M2, Nx,Ny,Nz, hx,hy,hz, b2x,b2y,b2z, muinv, BCPeriod);
-  MoperatorGeneral(PETSC_COMM_WORLD, &M3, Nx,Ny,Nz, hx,hy,hz, b3x,b3y,b3z, muinv, BCPeriod);
-  MoperatorGeneral(PETSC_COMM_WORLD, &M4, Nx,Ny,Nz, hx,hy,hz, b4x,b4y,b4z, muinv, BCPeriod);
-  MoperatorGeneral(PETSC_COMM_WORLD, &M5, Nx,Ny,Nz, hx,hy,hz, b5x,b5y,b5z, muinv, BCPeriod);
-  MoperatorGeneral(PETSC_COMM_WORLD, &M6, Nx,Ny,Nz, hx,hy,hz, b6x,b6y,b6z, muinv, BCPeriod);
+  MoperatorGeneralBloch(PETSC_COMM_WORLD, &M1, Nx,Ny,Nz, hx,hy,hz, b1x,b1y,b1z, muinv, BCPeriod, beta1);
+  MoperatorGeneralBloch(PETSC_COMM_WORLD, &M2, Nx,Ny,Nz, hx,hy,hz, b2x,b2y,b2z, muinv, BCPeriod, beta1);
+  MoperatorGeneralBloch(PETSC_COMM_WORLD, &M3, Nx,Ny,Nz, hx,hy,hz, b3x,b3y,b3z, muinv, BCPeriod, beta1);
+  MoperatorGeneralBloch(PETSC_COMM_WORLD, &M4, Nx,Ny,Nz, hx,hy,hz, b4x,b4y,b4z, muinv, BCPeriod, beta1);
+  MoperatorGeneralBloch(PETSC_COMM_WORLD, &M5, Nx,Ny,Nz, hx,hy,hz, b5x,b5y,b5z, muinv, BCPeriod, beta1);
+  MoperatorGeneralBloch(PETSC_COMM_WORLD, &M6, Nx,Ny,Nz, hx,hy,hz, b6x,b6y,b6z, muinv, BCPeriod, beta1);
 
 
   //Read the J's from input;
@@ -1124,24 +1124,24 @@ if (Job==4){
   PetscOptionsGetInt(PETSC_NULL,"-nummodes",&nummodes,&flg);  MyCheckAndOutputInt(flg,nummodes,"nummodes","number of degenerate modes to optimize");
 
   if(nummodes==2){
-    nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos1data,1e-8);
-    nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos2data,1e-8);
+    nlopt_add_inequality_constraint(opt,ldoskconstraint,&ldos1data,1e-8);
+    nlopt_add_inequality_constraint(opt,ldoskconstraint,&ldos2data,1e-8);
   }else if(nummodes==3){
-    nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos1data,1e-8);
-    nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos2data,1e-8);
-    nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos3data,1e-8);
+    nlopt_add_inequality_constraint(opt,ldoskconstraint,&ldos1data,1e-8);
+    nlopt_add_inequality_constraint(opt,ldoskconstraint,&ldos2data,1e-8);
+    nlopt_add_inequality_constraint(opt,ldoskconstraint,&ldos3data,1e-8);
   }else if(nummodes==4){
-    nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos1data,1e-8);
-    nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos2data,1e-8);
-    nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos3data,1e-8);
-    nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos4data,1e-8);
+    nlopt_add_inequality_constraint(opt,ldoskconstraint,&ldos1data,1e-8);
+    nlopt_add_inequality_constraint(opt,ldoskconstraint,&ldos2data,1e-8);
+    nlopt_add_inequality_constraint(opt,ldoskconstraint,&ldos3data,1e-8);
+    nlopt_add_inequality_constraint(opt,ldoskconstraint,&ldos4data,1e-8);
   }else if(nummodes==6){
-    nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos1data,1e-8);
-    nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos2data,1e-8);
-    nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos3data,1e-8);
-    nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos4data,1e-8);
-    nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos5data,1e-8);
-    nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos6data,1e-8);
+    nlopt_add_inequality_constraint(opt,ldoskconstraint,&ldos1data,1e-8);
+    nlopt_add_inequality_constraint(opt,ldoskconstraint,&ldos2data,1e-8);
+    nlopt_add_inequality_constraint(opt,ldoskconstraint,&ldos3data,1e-8);
+    nlopt_add_inequality_constraint(opt,ldoskconstraint,&ldos4data,1e-8);
+    nlopt_add_inequality_constraint(opt,ldoskconstraint,&ldos5data,1e-8);
+    nlopt_add_inequality_constraint(opt,ldoskconstraint,&ldos6data,1e-8);
   }
 
   nlopt_set_max_objective(opt,maxminobjfun,NULL);   
