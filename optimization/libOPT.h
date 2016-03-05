@@ -158,6 +158,8 @@ PetscErrorCode AddMuAbsorption(double *muinv, Vec muinvpml, double Qabs, int add
 PetscErrorCode GetUnitVec(Vec ej, int pol, int N);
 
 // from Output.c
+PetscErrorCode getreal(const char *flag, double *var, double autoval);
+
 PetscErrorCode  OutputVec(MPI_Comm comm, Vec x, const char *filenameComm, const char *filenameProperty);
 
 PetscErrorCode  OutputMat(MPI_Comm comm, Mat A, const char *filenameComm, const char *filenameProperty);

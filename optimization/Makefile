@@ -1,4 +1,4 @@
-all: optexec sixmodes_exec c4vopt_exec EPopt_exec solver_exec fiber_exec blochdirac_exec
+all: optexec sixmodes_exec c4vopt_exec EPopt_exec solver_exec fiber_exec blochdirac_exec degen_exec c4voptvar_exec penalty_exec
 
 export PETSC_DIR=/opt/local/petsc-3.6.3
 export PETSC_ARCH=arch-opt
@@ -7,7 +7,7 @@ export NloptLibPath=/usr/local/lib/
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
-CLEANFILES = opt.o sixldos.o c4vopt.o EPopt.o solver.o fiber.o blochdirac.o
+CLEANFILES = opt.o sixldos.o c4vopt.o EPopt.o solver.o fiber.o blochdirac.o degen.o c4voptvar.o penalty.o
 
 optexec: opt.o 
 	$(CLINKER) opt.o -o optexec ${NloptLibPath}/libnlopt.a ${CavityLibPath}/libOPT.a $(PETSC_LIB)
@@ -43,3 +43,18 @@ blochdirac_exec: blochdirac.o
 	$(CLINKER) blochdirac.o -o blochdirac_exec ${NloptLibPath}/libnlopt.a ${CavityLibPath}/libOPT.a $(PETSC_LIB)
 blochdirac: blochdirac.o
 	$(CLINKER) -Wall -g -o $@ blochdirac.o 
+
+degen_exec: degen.o
+	$(CLINKER) degen.o -o degen_exec ${NloptLibPath}/libnlopt.a ${CavityLibPath}/libOPT.a $(PETSC_LIB)
+degen: degen.o
+	$(CLINKER) -Wall -g -o $@ degen.o 
+
+c4voptvar_exec: c4voptvar.o
+	$(CLINKER) c4voptvar.o -o c4voptvar_exec ${NloptLibPath}/libnlopt.a ${CavityLibPath}/libOPT.a $(PETSC_LIB)
+c4voptvar: c4voptvar.o
+	$(CLINKER) -Wall -g -o $@ c4voptvar.o 
+
+penalty_exec: penalty.o
+	$(CLINKER) penalty.o -o penalty_exec ${NloptLibPath}/libnlopt.a ${CavityLibPath}/libOPT.a $(PETSC_LIB)
+penalty: penalty.o
+	$(CLINKER) -Wall -g -o $@ penalty.o 

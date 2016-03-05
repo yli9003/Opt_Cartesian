@@ -547,7 +547,7 @@ int main(int argc, char **argv)
         ierr=MatMult(A,epsSReal,epsFReal); CHKERRQ(ierr);									
   	ierr=VecPointwiseMult(epsFReal,epsFReal,epsI); CHKERRQ(ierr);							
   	ierr = VecAXPY(epsFReal,1.0,epsmedium1); CHKERRQ(ierr);								
-  	OutputVec(PETSC_COMM_WORLD, epsFReal, "initial_","epsF.m");
+  	//OutputVec(PETSC_COMM_WORLD, epsFReal, "initial_","epsF.m");
 	
 	if(imposec4v){
 	  Vec tmp;
@@ -958,6 +958,13 @@ if (Job==4){
   MoperatorGeneral(PETSC_COMM_WORLD, &M5, Nx,Ny,Nz, hx,hy,hz, b5x,b5y,b5z, muinv, BCPeriod);
   MoperatorGeneral(PETSC_COMM_WORLD, &M6, Nx,Ny,Nz, hx,hy,hz, b6x,b6y,b6z, muinv, BCPeriod);
 
+  double Jmag1, Jmag2, Jmag3, Jmag4, Jmag5, Jmag6;
+  getreal("-Jmag1",&Jmag1,1.0);
+  getreal("-Jmag2",&Jmag2,1.0);
+  getreal("-Jmag3",&Jmag3,1.0);
+  getreal("-Jmag4",&Jmag4,1.0);
+  getreal("-Jmag5",&Jmag5,1.0);
+  getreal("-Jmag6",&Jmag6,1.0);
 
   //Read the J's from input;
   VecSet(J1,0.0);
@@ -1011,13 +1018,21 @@ if (Job==4){
   free(J4array);
   free(J5array);
   free(J6array);
+  VecScale(J1,Jmag1);
+  VecScale(J2,Jmag2);
+  VecScale(J3,Jmag3);
+  VecScale(J4,Jmag4);
+  VecScale(J5,Jmag5);
+  VecScale(J6,Jmag6);
 
+  /*
   OutputVec(PETSC_COMM_WORLD,J1,"J1",".m");
   OutputVec(PETSC_COMM_WORLD,J2,"J2",".m");
   OutputVec(PETSC_COMM_WORLD,J3,"J3",".m");
   OutputVec(PETSC_COMM_WORLD,J4,"J4",".m");
   OutputVec(PETSC_COMM_WORLD,J5,"J5",".m");
   OutputVec(PETSC_COMM_WORLD,J6,"J6",".m");
+  */
 
   VecPointwiseMult(weightedJ1,weight,J1);
   VecPointwiseMult(weightedJ2,weight,J2);
@@ -1039,6 +1054,10 @@ if (Job==4){
   MatMult(D,J6,b6);
   VecScale(b6,omega);
 
+  ldos1data.omega=omega;
+  ldos1data.M=M1;
+  ldos1data.b=b1;
+  ldos1data.weightedJ=weightedJ1;
   LDOSdataGroup ldos2data={omega,M2,A,x2,b2,weightedJ2,epspmlQ,epsmedium,epsDiff,&its2,epscoef,vgrad,ksp2};
   LDOSdataGroup ldos3data={omega,M3,A,x3,b3,weightedJ3,epspmlQ,epsmedium,epsDiff,&its3,epscoef,vgrad,ksp3};
   LDOSdataGroup ldos4data={omega,M4,A,x4,b4,weightedJ4,epspmlQ,epsmedium,epsDiff,&its4,epscoef,vgrad,ksp4};

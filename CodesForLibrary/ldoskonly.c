@@ -69,7 +69,8 @@ double ldoskonly(int DegFree,double *epsopt, double *grad, void *data)
   /*-------------Calculate and print out the LDOS----------*/
   //tmpldos = -Re((wt.*J^*)'*E) 
   double tmpldosr, tmpldosi, ldos;
-  CmpVecDot(x,weightedJ,&tmpldosr,&tmpldosi);
+  MatMult(C,weightedJ,tmp);
+  CmpVecDot(x,tmp,&tmpldosr,&tmpldosi);
   ldos=-1.0*hxyz*tmpldosr;
   PetscPrintf(PETSC_COMM_WORLD,"---*****The current ldos for omega %.4e at step %.5d is %.16e \n", omega/(2*PI),count,ldos);
 

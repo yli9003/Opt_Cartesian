@@ -45,6 +45,7 @@ double ldospowerindex;
 
 PetscErrorCode setupKSP(MPI_Comm comm, KSP *ksp, PC *pc, int solver, int iteronly);
 double materialfraction(int DegFree,double *epsopt, double *grad, void *data);
+double pfunc(int DegFree, double *epsopt, double *grad, void *data);
 
 #undef __FUNCT__ 
 #define __FUNCT__ "main" 
@@ -880,7 +881,7 @@ if (Job==4){
   Vec x5,J5,weightedJ5,b5;
   Vec x6,J6,weightedJ6,b6;
   double *muinv;
-  double omega;
+  double omega3,omega4,omega5,omega6;
   KSP ksp3, ksp4, ksp5, ksp6;
   PC pc3, pc4, pc5, pc6;
   int its3=100, its4=100, its5=100, its6=100;
@@ -912,11 +913,35 @@ if (Job==4){
   VecCopy(epscoef1,epscoef);
   muinv = (double *) malloc(sizeof(double)*6*Nxyz);
   AddMuAbsorption(muinv, muinvpml1, Qabs, add);
-  omega=omega1;
+
+  getreal("-freq1",&omega1,1.0);
+  getreal("-freq2",&omega2,1.0);
+  getreal("-freq3",&omega3,1.0);
+  getreal("-freq4",&omega4,1.0);
+  getreal("-freq5",&omega5,1.0);
+  getreal("-freq6",&omega6,1.0);
+  omega1=2*PI*omega1;
+  omega2=2*PI*omega2;
+  omega3=2*PI*omega3;
+  omega4=2*PI*omega4;
+  omega5=2*PI*omega5;
+  omega6=2*PI*omega6;
+
+  double Jmag1, Jmag2, Jmag3, Jmag4, Jmag5, Jmag6;
+  getreal("-Jmag1",&Jmag1,1.0);
+  getreal("-Jmag2",&Jmag2,1.0);
+  getreal("-Jmag3",&Jmag3,1.0);
+  getreal("-Jmag4",&Jmag4,1.0);
+  getreal("-Jmag5",&Jmag5,1.0);
+  getreal("-Jmag6",&Jmag6,1.0);
+
   setupKSP(PETSC_COMM_WORLD,&ksp3,&pc3,solver,iteronly);
   setupKSP(PETSC_COMM_WORLD,&ksp4,&pc4,solver,iteronly);
   setupKSP(PETSC_COMM_WORLD,&ksp5,&pc5,solver,iteronly);
   setupKSP(PETSC_COMM_WORLD,&ksp6,&pc6,solver,iteronly);
+  
+  double frac;
+  getreal("-penalfrac",&frac,1.0);
 
   int b3x[2], b3y[2], b3z[2];
   PetscOptionsGetInt(PETSC_NULL,"-b3xl",b3x,&flg);    MyCheckAndOutputInt(flg,b3x[0],"b3xl","BC at x lower for mode 3");
@@ -949,7 +974,7 @@ if (Job==4){
   PetscOptionsGetInt(PETSC_NULL,"-b6yu",b6y+1,&flg);  MyCheckAndOutputInt(flg,b6y[1],"b6yu","BC at y upper for mode 6");
   PetscOptionsGetInt(PETSC_NULL,"-b6zl",b6z,&flg);    MyCheckAndOutputInt(flg,b6z[0],"b6zl","BC at z lower for mode 6");
   PetscOptionsGetInt(PETSC_NULL,"-b6zu",b6z+1,&flg);  MyCheckAndOutputInt(flg,b6z[1],"b6zu","BC at z upper for mode 6");
-
+  
 
   MoperatorGeneral(PETSC_COMM_WORLD, &M1, Nx,Ny,Nz, hx,hy,hz, b1x,b1y,b1z, muinv, BCPeriod);
   MoperatorGeneral(PETSC_COMM_WORLD, &M2, Nx,Ny,Nz, hx,hy,hz, b2x,b2y,b2z, muinv, BCPeriod);
@@ -1011,13 +1036,21 @@ if (Job==4){
   free(J4array);
   free(J5array);
   free(J6array);
+  VecScale(J1,Jmag1);
+  VecScale(J2,Jmag2);
+  VecScale(J3,Jmag3);
+  VecScale(J4,Jmag4);
+  VecScale(J5,Jmag5);
+  VecScale(J6,Jmag6);
 
+  /*
   OutputVec(PETSC_COMM_WORLD,J1,"J1",".m");
   OutputVec(PETSC_COMM_WORLD,J2,"J2",".m");
   OutputVec(PETSC_COMM_WORLD,J3,"J3",".m");
   OutputVec(PETSC_COMM_WORLD,J4,"J4",".m");
   OutputVec(PETSC_COMM_WORLD,J5,"J5",".m");
   OutputVec(PETSC_COMM_WORLD,J6,"J6",".m");
+  */
 
   VecPointwiseMult(weightedJ1,weight,J1);
   VecPointwiseMult(weightedJ2,weight,J2);
@@ -1027,23 +1060,27 @@ if (Job==4){
   VecPointwiseMult(weightedJ6,weight,J6);
 
   MatMult(D,J1,b1);
-  VecScale(b1,omega);
+  VecScale(b1,omega1);
   MatMult(D,J2,b2);
-  VecScale(b2,omega);
+  VecScale(b2,omega2);
   MatMult(D,J3,b3);
-  VecScale(b3,omega);
+  VecScale(b3,omega3);
   MatMult(D,J4,b4);
-  VecScale(b4,omega);
+  VecScale(b4,omega4);
   MatMult(D,J5,b5);
-  VecScale(b5,omega);
+  VecScale(b5,omega5);
   MatMult(D,J6,b6);
-  VecScale(b6,omega);
+  VecScale(b6,omega6);
 
-  LDOSdataGroup ldos2data={omega,M2,A,x2,b2,weightedJ2,epspmlQ,epsmedium,epsDiff,&its2,epscoef,vgrad,ksp2};
-  LDOSdataGroup ldos3data={omega,M3,A,x3,b3,weightedJ3,epspmlQ,epsmedium,epsDiff,&its3,epscoef,vgrad,ksp3};
-  LDOSdataGroup ldos4data={omega,M4,A,x4,b4,weightedJ4,epspmlQ,epsmedium,epsDiff,&its4,epscoef,vgrad,ksp4};
-  LDOSdataGroup ldos5data={omega,M5,A,x5,b5,weightedJ5,epspmlQ,epsmedium,epsDiff,&its5,epscoef,vgrad,ksp5};
-  LDOSdataGroup ldos6data={omega,M6,A,x6,b6,weightedJ6,epspmlQ,epsmedium,epsDiff,&its6,epscoef,vgrad,ksp6};
+  ldos1data.omega=omega1;
+  ldos1data.M=M1;
+  ldos1data.b=b1;
+  ldos1data.weightedJ=weightedJ1;
+  LDOSdataGroup ldos2data={omega2,M2,A,x2,b2,weightedJ2,epspmlQ,epsmedium,epsDiff,&its2,epscoef,vgrad,ksp2};
+  LDOSdataGroup ldos3data={omega3,M3,A,x3,b3,weightedJ3,epspmlQ,epsmedium,epsDiff,&its3,epscoef,vgrad,ksp3};
+  LDOSdataGroup ldos4data={omega4,M4,A,x4,b4,weightedJ4,epspmlQ,epsmedium,epsDiff,&its4,epscoef,vgrad,ksp4};
+  LDOSdataGroup ldos5data={omega5,M5,A,x5,b5,weightedJ5,epspmlQ,epsmedium,epsDiff,&its5,epscoef,vgrad,ksp5};
+  LDOSdataGroup ldos6data={omega6,M6,A,x6,b6,weightedJ6,epspmlQ,epsmedium,epsDiff,&its6,epscoef,vgrad,ksp6};
 
  /*---------Optimization--------*/
   double tstart;
@@ -1145,6 +1182,7 @@ if (Job==4){
     nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos6data,1e-8);
   }
 
+  if(frac<1.0) nlopt_add_inequality_constraint(opt,pfunc,&frac,1e-8);
   nlopt_set_max_objective(opt,maxminobjfun,NULL);   
 
   result = nlopt_optimize(opt,epsoptAll,&maxf);
@@ -1306,6 +1344,27 @@ if (Job==4){
 
   return 0;
 }
+
+double pfunc(int DegFree, double *epsopt, double *grad, void *data)
+{
+  int i;
+  double sumeps;
+  double max=DegFree/4;
+  double *tmp  = (double *) data;
+  double frac= *tmp;
+
+  sumeps=0.0;
+  for (i=0;i<DegFree;i++){
+    sumeps+=fabs(epsopt[i]*(1-epsopt[i]));
+    grad[i]=1-2*epsopt[i];
+  }
+
+  PetscPrintf(PETSC_COMM_WORLD,"******the current binaryindex is %1.6e \n",sumeps);
+  PetscPrintf(PETSC_COMM_WORLD,"******the current binaryexcess  is %1.6e \n",sumeps-frac*max);
+
+  return sumeps - frac*max;
+}
+
   
 double materialfraction(int DegFree,double *epsopt, double *grad, void *data)
 {

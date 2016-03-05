@@ -1,6 +1,19 @@
 #include <petsc.h>
 #include <string.h>
 
+#undef __FUNCT__
+#define __FUNCT__ "getreal"
+PetscErrorCode getreal(const char *flag, double *var, double autoval)
+{
+  PetscErrorCode ierr;
+  PetscBool flg;
+  ierr=PetscOptionsGetReal(PETSC_NULL,flag,var,&flg); CHKERRQ(ierr);
+  if(!flg) *var=autoval;
+  ierr=PetscPrintf(PETSC_COMM_WORLD,"--%s is %g \n",flag,*var); CHKERRQ(ierr);
+
+  PetscFunctionReturn(ierr);
+}
+
 #undef __FUNCT__ 
 #define __FUNCT__ "OutputVec"
 PetscErrorCode OutputVec(MPI_Comm comm, Vec x, const char *filenameComm, const char *filenameProperty)
