@@ -218,12 +218,15 @@ PetscErrorCode SolveMatrix(MPI_Comm comm, KSP ksp, Mat M, Vec b, Vec x, int *its
     ierr = KSPSetOperators(ksp,M,M);CHKERRQ(ierr);
     ierr = KSPSetReusePreconditioner(ksp,PETSC_TRUE);CHKERRQ(ierr);}
 
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"==> initial-its is %d. maxit is %d.----\n ",*its,maxit);CHKERRQ(ierr);    
   ierr = KSPSolve(ksp,b,x);CHKERRQ(ierr);
   ierr = KSPGetIterationNumber(ksp,its);CHKERRQ(ierr);
 
   // if GMRES is stopped due to maxit, then redo it with sparse direct solve;
   if(*its>(maxit-2))
     {
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"==> after-one-solve-its is %d. maxit is %d.----\n ",*its,maxit);CHKERRQ(ierr);    
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"==> Too Many Iterations. Re-solving with Sparse Direct Solver.\n");CHKERRQ(ierr);    
       ierr = KSPSetOperators(ksp,M,M);CHKERRQ(ierr);
       ierr = KSPSetReusePreconditioner(ksp,PETSC_FALSE);CHKERRQ(ierr);
       ierr = KSPSolve(ksp,b,x);CHKERRQ(ierr);

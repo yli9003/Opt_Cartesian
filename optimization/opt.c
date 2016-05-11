@@ -105,7 +105,8 @@ int main(int argc, char **argv)
   Mxyz=Mx*My*Mz, Nxyz=Nx*Ny*Nz;
   DegFree = (anisotropicDOF ? 3 : 1 )*Mx*My*((Mzslab==0)?Mz:1);
   PetscOptionsGetReal(PETSC_NULL,"-hx",&hx,&flg);  MyCheckAndOutputDouble(flg,hx,"hx","hx");
-  hy=hx, hz=hx;
+  getreal("-hy",&hy,hx);
+  getreal("-hz",&hz,hx);
   hxyz = (Nz==1)*hx*hy + (Nz>1)*hx*hy*hz;
 
   int BCPeriod, LowerPML;

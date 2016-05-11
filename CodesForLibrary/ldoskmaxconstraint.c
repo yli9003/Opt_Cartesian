@@ -24,9 +24,10 @@ extern Mat Hfilt;
 extern KSP kspH;
 extern int itsH;
 
+// t - ldos
 #undef __FUNCT__ 
-#define __FUNCT__ "ldoskconstraint"
-double ldoskconstraint(int DegFreeAll,double *epsoptAll, double *gradAll, void *data)
+#define __FUNCT__ "ldoskmaxconstraint"
+double ldoskmaxconstraint(int DegFreeAll,double *epsoptAll, double *gradAll, void *data)
 {
   
   PetscErrorCode ierr;

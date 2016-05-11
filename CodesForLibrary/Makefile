@@ -1,4 +1,4 @@
-all: MoperatorGeneral.o MoperatorGeneralBloch_XdL.o SourceGeneration.o PML.o Eps.o MathTools.o MatVecMaker.o Output.o DifferentialOps.o mympisetup.o ldos.o projsimpoverlap.o singleldos.o ldosonly.o filters.o alpha.o FOM.o thgfom_arbitraryPol.o ldosconstraint.o ldoskconstraint.o ldoskonly.o lens.o c4v.o EP.o eigsolver.o
+all: MoperatorGeneral.o MoperatorGeneralBloch_XdL.o SourceGeneration.o PML.o Eps.o MathTools.o MatVecMaker.o Output.o DifferentialOps.o mympisetup.o ldos.o projsimpoverlap.o singleldos.o ldosonly.o filters.o alpha.o FOM.o thgfom_arbitraryPol.o ldosconstraint.o ldoskconstraint.o ldoskonly.o lens.o c4v.o EP.o eigsolver.o eigsolvertrans.o chiral.o ldoskmaxconstraint.o ldoskminconstraint.o sfg_arbitraryPol.o
 
 export PETSC_DIR=/opt/local/petsc-3.6.3
 export PETSC_ARCH=arch-opt
@@ -7,7 +7,7 @@ export SLEPC_DIR=/opt/local/slepc-3.6.2
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 include ${SLEPC_DIR}/lib/slepc/conf/slepc_common
-CLEANFILES =  MoperatorGeneral.o MoperatorGeneralBloch_XdL.o SourceGeneration.o PML.o Eps.o MathTools.o MatVecMaker.o Output.o DifferentialOps.o mympisetup.o ldos.o projsimpoverlap.o singleldos.o ldosonly.o filters.o alpha.o FOM.o thgfom_arbitraryPol.o ldosconstraint.o ldoskconstraint.o ldoskonly.o lens.o c4v.o EP.o eigsolver.o
+CLEANFILES =  MoperatorGeneral.o MoperatorGeneralBloch_XdL.o SourceGeneration.o PML.o Eps.o MathTools.o MatVecMaker.o Output.o DifferentialOps.o mympisetup.o ldos.o projsimpoverlap.o singleldos.o ldosonly.o filters.o alpha.o FOM.o thgfom_arbitraryPol.o ldosconstraint.o ldoskconstraint.o ldoskonly.o lens.o c4v.o EP.o eigsolver.o eigsolvertrans.o chiral.o ldoskmaxconstraint.o ldoskminconstraint.o sfg_arbitraryPol.o
 
 MoperatorGeneral: MoperatorGeneral.o
 	$(CLINKER) -Wall -g -o $@ MoperatorGeneral.o  
@@ -59,3 +59,13 @@ EP:EP.o
 	$(CLINKER) -Wall -g -o $@ EP.o
 eigsolver:eigsolver.o
 	$(CLINKER) -Wall -g -o $@ eigsolver.o
+eigsolvertrans:eigsolvertrans.o
+	$(CLINKER) -Wall -g -o $@ eigsolvertrans.o
+chiral:chiral.o
+	$(CLINKER) -Wall -g -o $@ chiral.o
+ldoskmaxconstraint:ldoskmaxconstraint.o
+	$(CLINKER) -Wall -g -o $@ ldoskmaxconstraint.o
+ldoskminconstraint:ldoskminconstraint.o
+	$(CLINKER) -Wall -g -o $@ ldoskminconstraint.o
+sfg_arbitraryPol:sfg_arbitraryPol.o
+	$(CLINKER) -Wall -g -o $@ sfg_arbitraryPol.o

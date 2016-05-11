@@ -14,6 +14,19 @@ PetscErrorCode getreal(const char *flag, double *var, double autoval)
   PetscFunctionReturn(ierr);
 }
 
+#undef __FUNCT__
+#define __FUNCT__ "getint"
+PetscErrorCode getint(const char *flag, int *var, int autoval)
+{
+  PetscErrorCode ierr;
+  PetscBool flg;
+  ierr=PetscOptionsGetInt(PETSC_NULL,flag,var,&flg); CHKERRQ(ierr);
+  if(!flg) *var=autoval;
+  ierr=PetscPrintf(PETSC_COMM_WORLD,"--%s is %d \n",flag,*var); CHKERRQ(ierr);
+
+  PetscFunctionReturn(ierr);
+}
+
 #undef __FUNCT__ 
 #define __FUNCT__ "OutputVec"
 PetscErrorCode OutputVec(MPI_Comm comm, Vec x, const char *filenameComm, const char *filenameProperty)

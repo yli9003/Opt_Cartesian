@@ -95,7 +95,6 @@ int main(int argc, char **argv)
   char filenameComm[PETSC_MAX_PATH_LEN], epsfile[PETSC_MAX_PATH_LEN], inputsrc[PETSC_MAX_PATH_LEN];
   PetscOptionsGetString(PETSC_NULL,"-filenameprefix",filenameComm,PETSC_MAX_PATH_LEN,&flg); MyCheckAndOutputChar(flg,filenameComm,"filenameprefix","Filename Prefix");
   PetscOptionsGetString(PETSC_NULL,"-epsfile",epsfile,PETSC_MAX_PATH_LEN,&flg); MyCheckAndOutputChar(flg,epsfile,"epsfile","Input epsilon file");
-  PetscOptionsGetString(PETSC_NULL,"-inputsrc",inputsrc,PETSC_MAX_PATH_LEN,&flg); MyCheckAndOutputChar(flg,inputsrc,"inputsrc","Input source current");
 
   int solver;
   PetscOptionsGetInt(PETSC_NULL,"-solver",&solver,&flg);  MyCheckAndOutputInt(flg,solver,"solver","LU Direct solver choice (0 PASTIX, 1 MUMPS, 2 SUPERLU_DIST)");
@@ -133,24 +132,6 @@ int main(int argc, char **argv)
 
   /*--------Setup the epsilon PML------------------*/
   EpsPMLFull(PETSC_COMM_WORLD, epspml,Nx,Ny,Nz,Npmlx,Npmly,Npmlz,sigmax,sigmay,sigmaz,omega, LowerPML);
-
-  /*-------Setup J and b-------------*/
-  double *JArray;
-  FILE *Jptf;
-  JArray = (double *) malloc(6*Nxyz*sizeof(double));
-  Jptf = fopen(inputsrc,"r");
-  PetscPrintf(PETSC_COMM_WORLD,"reading from current file \n");
-  int inJi;
-  for (inJi=0;inJi<6*Nxyz;inJi++)
-    { 
-      fscanf(Jptf,"%lf",&JArray[inJi]);
-    }
-  fclose(Jptf);
-  ArrayToVec(JArray,J);
-  free(JArray);
-  ierr = MatMult(D,J,b);CHKERRQ(ierr);
-  VecScale(b,omega);
-  PetscPrintf(PETSC_COMM_WORLD,"J and b constructed. \n");
 
   /*--------Setup M matrix-----------*/
   Vec muinvpml;
@@ -190,21 +171,29 @@ int main(int argc, char **argv)
   Vec epsC;
   VecDuplicate(epsNoPML,&epsC);
   ComplexVectorProduct(epsNoPML,epspml,epsC,D);
-
   AddEpsToM(M,D,epsC,Nxyz,omega);
-  SolveMatrix(PETSC_COMM_WORLD,ksp,M,b,x,&its);
 
   Vec tmp;
   double JEr;
+  int cx, cy;
   VecDuplicate(epsNoPML,&tmp);
-  ComplexVectorProduct(J,x,tmp,D);
-  VecPointwiseMult(tmp,tmp,vR);
-  VecSum(tmp,&JEr);
-  JEr = -hxyz*JEr;
-  PetscPrintf(PETSC_COMM_WORLD,"**** - Re[ J dot E ] is %g \n",JEr);
-  VecDestroy(&tmp);
 
-  OutputVec(PETSC_COMM_WORLD, x, filenameComm,"_Efield.m"); 
+  for(cx=0;cx<Nx;cx++){
+    for(cy=0;cy<Ny;cy++){
+      SourceSingleSetZ(PETSC_COMM_WORLD, J, Nx, Ny, 1, cx, cy, 0, 1.0/hxyz);
+      MatMult(D,J,b);
+      VecScale(b,omega);
+      SolveMatrix(PETSC_COMM_WORLD,ksp,M,b,x,&its);    
+      PetscPrintf(PETSC_COMM_WORLD,"****solve-its is %d \n",its);
+      ComplexVectorProduct(J,x,tmp,D);
+      VecPointwiseMult(tmp,tmp,vR);
+      VecSum(tmp,&JEr);
+      JEr = -hxyz*JEr;
+      PetscPrintf(PETSC_COMM_WORLD,"**** cx, cy, -Re[JdotE]: %d, %d, %g \n",cx,cy,JEr);
+      VecSet(J,0.0);
+      VecSet(b,0.0);
+    }
+  }
 
   ierr = VecDestroy(&epsNoPML);CHKERRQ(ierr);
   ierr = VecDestroy(&epspml);CHKERRQ(ierr);
@@ -214,6 +203,7 @@ int main(int argc, char **argv)
   ierr = VecDestroy(&b);CHKERRQ(ierr);
   ierr = VecDestroy(&x);CHKERRQ(ierr);
   ierr = VecDestroy(&vR);CHKERRQ(ierr);
+  ierr = VecDestroy(&tmp);CHKERRQ(ierr);
 
   ierr = MatDestroy(&M);CHKERRQ(ierr);
   ierr = MatDestroy(&D);CHKERRQ(ierr);

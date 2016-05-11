@@ -24,9 +24,10 @@ extern Mat Hfilt;
 extern KSP kspH;
 extern int itsH;
 
+// ldos - 1/t
 #undef __FUNCT__ 
-#define __FUNCT__ "ldoskconstraint"
-double ldoskconstraint(int DegFreeAll,double *epsoptAll, double *gradAll, void *data)
+#define __FUNCT__ "ldoskminconstraint"
+double ldoskminconstraint(int DegFreeAll,double *epsoptAll, double *gradAll, void *data)
 {
   
   PetscErrorCode ierr;
@@ -76,7 +77,7 @@ double ldoskconstraint(int DegFreeAll,double *epsoptAll, double *gradAll, void *
   SolveMatrix(PETSC_COMM_WORLD,ksp,tmpM,b,x,its);
 
   /*-------------Calculate and print out the LDOS----------*/
-  //tmpldos = -Re((wt.*J^*)'*E) 
+  //tmpldos = -Re(conj(wtJ)*E) 
   double tmpldosr, tmpldosi, ldos;
   MatMult(C,weightedJ,tmp);
   CmpVecDot(x,tmp,&tmpldosr,&tmpldosi);
@@ -88,7 +89,7 @@ double ldoskconstraint(int DegFreeAll,double *epsoptAll, double *gradAll, void *
     MatMult(C,tmp,Grad);
     CmpVecProd(Grad,epscoef,tmp);
     CmpVecProd(tmp,x,Grad);
-    VecScale(Grad,1.0*hxyz);
+    VecScale(Grad,-1.0*hxyz);
     ierr = VecPointwiseMult(Grad,Grad,vR); CHKERRQ(ierr);
 
     ierr = MatMultTranspose(A,Grad,vgrad);CHKERRQ(ierr);
@@ -98,7 +99,7 @@ double ldoskconstraint(int DegFreeAll,double *epsoptAll, double *gradAll, void *
 
     ierr = VecToArray(epsgrad,gradAll,scatter,from,to,vgradlocal,DegFree);
 
-    gradAll[DegFreeAll-1]=1;
+    gradAll[DegFreeAll-1]=1/(epsoptAll[DegFreeAll-1]*epsoptAll[DegFreeAll-1]);
 
   }
 
@@ -111,37 +112,5 @@ double ldoskconstraint(int DegFreeAll,double *epsoptAll, double *gradAll, void *
   VecDestroy(&Grad);
   VecDestroy(&epsgrad);
 
-  return epsoptAll[DegFreeAll-1]-ldos;
+  return ldos - 1/epsoptAll[DegFreeAll-1];
 }
-
-/*
-#undef __FUNCT__ 
-#define __FUNCT__ "maxminobjfun"
-double maxminobjfun(int DegFreeAll,double *epsoptAll, double *gradAll, void *data)
-{
-
-  if(gradAll)
-    {
-      int i;
-      for (i=0;i<DegFreeAll-1;i++)
-	{
-	  gradAll[i]=0;
-	}
-      gradAll[DegFreeAll-1]=1;
-    }
-  
-  PetscPrintf(PETSC_COMM_WORLD,"**the current value of dummy objective variable is %.8e**\n",epsoptAll[DegFreeAll-1]);
-
-  char buffer [100];
-  int STORE=1;    
-  if(STORE==1 && (count%outputbase==0))
-    {
-      sprintf(buffer,"%.5depsSReal.m",count);
-      OutputVec(PETSC_COMM_WORLD, epsSReal, filenameComm, buffer);
-    }
-
-  count++;
-
-  return epsoptAll[DegFreeAll-1];
-}
-*/

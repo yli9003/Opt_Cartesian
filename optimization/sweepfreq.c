@@ -78,27 +78,27 @@ int main(int argc, char **argv)
   PetscOptionsGetInt(PETSC_NULL,"-bzl",bz,&flg);    MyCheckAndOutputInt(flg,bz[0],"bzl","BC at z lower for mode 1");
   PetscOptionsGetInt(PETSC_NULL,"-bzu",bz+1,&flg);  MyCheckAndOutputInt(flg,bz[1],"bzu","BC at z upper for mode 1");
 
-  double freq, omega;
-  PetscOptionsGetReal(PETSC_NULL,"-freq",&freq,&flg);
-  if(!flg) freq=1.0;
-  PetscPrintf(PETSC_COMM_WORLD,"-------freq: %g \n",freq);
-  omega=2.0*PI*freq;
-
   double RRT, sigmax, sigmay, sigmaz;
   RRT=1e-25;
   sigmax = pmlsigma(RRT,(double) Npmlx*hx);
   sigmay = pmlsigma(RRT,(double) Npmly*hy);
   sigmaz = pmlsigma(RRT,(double) Npmlz*hz);
 
-  PetscPrintf(PETSC_COMM_WORLD,"sigma, omega, Nxyz: %g, %g, %g, %g %d \n", sigmax, sigmay, sigmaz, omega, Nxyz);
-
-  char filenameComm[PETSC_MAX_PATH_LEN], epsfile[PETSC_MAX_PATH_LEN], inputsrc[PETSC_MAX_PATH_LEN];
+  char filenameComm[PETSC_MAX_PATH_LEN], epsfile[PETSC_MAX_PATH_LEN];
   PetscOptionsGetString(PETSC_NULL,"-filenameprefix",filenameComm,PETSC_MAX_PATH_LEN,&flg); MyCheckAndOutputChar(flg,filenameComm,"filenameprefix","Filename Prefix");
   PetscOptionsGetString(PETSC_NULL,"-epsfile",epsfile,PETSC_MAX_PATH_LEN,&flg); MyCheckAndOutputChar(flg,epsfile,"epsfile","Input epsilon file");
-  PetscOptionsGetString(PETSC_NULL,"-inputsrc",inputsrc,PETSC_MAX_PATH_LEN,&flg); MyCheckAndOutputChar(flg,inputsrc,"inputsrc","Input source current");
 
   int solver;
   PetscOptionsGetInt(PETSC_NULL,"-solver",&solver,&flg);  MyCheckAndOutputInt(flg,solver,"solver","LU Direct solver choice (0 PASTIX, 1 MUMPS, 2 SUPERLU_DIST)");
+
+  int cx, cy;
+  getint("-cx",&cx,0);
+  getint("-cy",&cy,0);
+  
+  double fmin, fmax, df;
+  getreal("-fmin",&fmin,1.0);
+  getreal("-fmax",&fmax,1.0);
+  getreal("-df",&df,0.1);
 
 /**************************************************************************************************************************************************************/
   Vec epsNoPML, epspml, J, b, x;
@@ -132,29 +132,11 @@ int main(int argc, char **argv)
   PetscPrintf(PETSC_COMM_WORLD,"epsNoPML constructed. \n");
 
   /*--------Setup the epsilon PML------------------*/
-  EpsPMLFull(PETSC_COMM_WORLD, epspml,Nx,Ny,Nz,Npmlx,Npmly,Npmlz,sigmax,sigmay,sigmaz,omega, LowerPML);
-
-  /*-------Setup J and b-------------*/
-  double *JArray;
-  FILE *Jptf;
-  JArray = (double *) malloc(6*Nxyz*sizeof(double));
-  Jptf = fopen(inputsrc,"r");
-  PetscPrintf(PETSC_COMM_WORLD,"reading from current file \n");
-  int inJi;
-  for (inJi=0;inJi<6*Nxyz;inJi++)
-    { 
-      fscanf(Jptf,"%lf",&JArray[inJi]);
-    }
-  fclose(Jptf);
-  ArrayToVec(JArray,J);
-  free(JArray);
-  ierr = MatMult(D,J,b);CHKERRQ(ierr);
-  VecScale(b,omega);
-  PetscPrintf(PETSC_COMM_WORLD,"J and b constructed. \n");
+  EpsPMLFull(PETSC_COMM_WORLD, epspml,Nx,Ny,Nz,Npmlx,Npmly,Npmlz,sigmax,sigmay,sigmaz,2.0*PI, LowerPML);
 
   /*--------Setup M matrix-----------*/
   Vec muinvpml;
-  MuinvPMLFull(PETSC_COMM_SELF, &muinvpml,Nx,Ny,Nz,Npmlx,Npmly,Npmlz,sigmax,sigmay,sigmaz,omega,LowerPML);
+  MuinvPMLFull(PETSC_COMM_SELF, &muinvpml,Nx,Ny,Nz,Npmlx,Npmly,Npmlz,sigmax,sigmay,sigmaz,2*PI,LowerPML);
   double *muinv;
   muinv = (double *) malloc(sizeof(double)*6*Nxyz);
   double Qabs=1.0/0.0;
@@ -168,6 +150,9 @@ int main(int argc, char **argv)
   }
   ierr = PetscObjectSetName((PetscObject) M, "M"); CHKERRQ(ierr);
   PetscPrintf(PETSC_COMM_WORLD,"M matrix constructed. \n"); 
+  int Mrows, Mcols;
+  MatGetSize(M,&Mrows,&Mcols);
+  PetscPrintf(PETSC_COMM_WORLD,"****Dimensions of M is %d by %d \n",Mrows,Mcols);
 
   /*--------Setup the KSP variables ---------------*/
   KSP ksp;
@@ -183,28 +168,35 @@ int main(int argc, char **argv)
 
 /**************************************************************************************************************************************************************/
 
-  int Mrows, Mcols;
-  MatGetSize(M,&Mrows,&Mcols);
-  PetscPrintf(PETSC_COMM_WORLD,"****Dimensions of M is %d by %d \n",Mrows,Mcols);
-
+  Mat tmpM;
   Vec epsC;
+  Vec tmpb;
+  Vec tmp;
+  double freq, omega, JEr;
+
   VecDuplicate(epsNoPML,&epsC);
+  VecDuplicate(epsNoPML,&tmpb);
+  VecDuplicate(epsNoPML,&tmp);
   ComplexVectorProduct(epsNoPML,epspml,epsC,D);
 
-  AddEpsToM(M,D,epsC,Nxyz,omega);
-  SolveMatrix(PETSC_COMM_WORLD,ksp,M,b,x,&its);
+  SourceSingleSetZ(PETSC_COMM_WORLD, J, Nx, Ny, 1, cx, cy, 0, 1.0/hxyz);
+  MatMult(D,J,b);
 
-  Vec tmp;
-  double JEr;
-  VecDuplicate(epsNoPML,&tmp);
-  ComplexVectorProduct(J,x,tmp,D);
-  VecPointwiseMult(tmp,tmp,vR);
-  VecSum(tmp,&JEr);
-  JEr = -hxyz*JEr;
-  PetscPrintf(PETSC_COMM_WORLD,"**** - Re[ J dot E ] is %g \n",JEr);
-  VecDestroy(&tmp);
-
-  OutputVec(PETSC_COMM_WORLD, x, filenameComm,"_Efield.m"); 
+  for(freq=fmin;freq<fmax+df;freq+=df){
+    omega = 2.0*PI*freq;
+    MatDuplicate(M,MAT_COPY_VALUES,&tmpM);
+    AddEpsToM(tmpM,D,epsC,Nxyz,omega);
+    VecCopy(b,tmpb);
+    VecScale(tmpb,omega);
+    SolveMatrix(PETSC_COMM_WORLD,ksp,tmpM,tmpb,x,&its);    
+    PetscPrintf(PETSC_COMM_WORLD,"****solve-its is %d \n",its);
+    ComplexVectorProduct(J,x,tmp,D);
+    VecPointwiseMult(tmp,tmp,vR);
+    VecSum(tmp,&JEr);
+    JEr = -hxyz*JEr;
+    PetscPrintf(PETSC_COMM_WORLD,"**** freq, -Re[JdotE]: %.16f, %.16f \n",freq,JEr);
+  }
+  
 
   ierr = VecDestroy(&epsNoPML);CHKERRQ(ierr);
   ierr = VecDestroy(&epspml);CHKERRQ(ierr);
@@ -214,8 +206,11 @@ int main(int argc, char **argv)
   ierr = VecDestroy(&b);CHKERRQ(ierr);
   ierr = VecDestroy(&x);CHKERRQ(ierr);
   ierr = VecDestroy(&vR);CHKERRQ(ierr);
+  ierr = VecDestroy(&tmp);CHKERRQ(ierr);
+  ierr = VecDestroy(&tmpb);CHKERRQ(ierr);
 
   ierr = MatDestroy(&M);CHKERRQ(ierr);
+  ierr = MatDestroy(&tmpM);CHKERRQ(ierr);
   ierr = MatDestroy(&D);CHKERRQ(ierr);
 
   free(muinv);

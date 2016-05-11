@@ -61,10 +61,10 @@ int main(int argc, char **argv)
   if(myrank==0) 
     mma_verbose=1;
 
-/*****************************************************-------Set up the options parameters-------------********************************************************/
-/**************************************************************************************************************************************************************/
-/**************************************************************************************************************************************************************/
-/**************************************************************************************************************************************************************/
+  /*****************************************************-------Set up the options parameters-------------********************************************************/
+  /**************************************************************************************************************************************************************/
+  /**************************************************************************************************************************************************************/
+  /**************************************************************************************************************************************************************/
   PetscBool flg;
 
   PetscOptionsGetInt(PETSC_NULL,"-initdirect",&initdirect,&flg);  MyCheckAndOutputInt(flg,initdirect,"initdirect","Initial number of direct LU solves");
@@ -215,11 +215,11 @@ int main(int argc, char **argv)
   PetscOptionsGetReal(PETSC_NULL,"-nR",&nR,&flg); MyCheckAndOutputDouble(flg,nR,"nR","nR");
   PetscOptionsGetInt(PETSC_NULL,"-dimH",&dimH,&flg); MyCheckAndOutputDouble(flg,dimH,"dimH","dimH");
 
-/**************************************************************************************************************************************************************/
-/**************************************************************************************************************************************************************/
-/**************************************************************************************************************************************************************/
-/**************************************************************************************************************************************************************/
-/**************************************************************************************************************************************************************/
+  /**************************************************************************************************************************************************************/
+  /**************************************************************************************************************************************************************/
+  /**************************************************************************************************************************************************************/
+  /**************************************************************************************************************************************************************/
+  /**************************************************************************************************************************************************************/
 
 
   /*------Set up the A, B, C, D matrices--------------*/
@@ -447,35 +447,35 @@ int main(int argc, char **argv)
 
 
   /*****************************************This creates a slab out of a given 2d cross-section********************************************/
-  /**/	int threeDim;															/**/
-  /**/	PetscOptionsGetInt(PETSC_NULL,"-threeDim",&threeDim,&flg);									/**/
-  /**/	if(!flg) threeDim=0;														/**/
-  /**/	if(threeDim){															/**/
-  /**/		ierr = PetscPrintf(PETSC_COMM_WORLD,"--------Interpolation matrix A has been set up.--------\n ");CHKERRQ(ierr);	/**/
-  /**/		Vec tmpepsSReal, tmpepsFReal;												/**/
-  /**/		ierr = MatCreateVecs(A,&tmpepsSReal, &tmpepsFReal); CHKERRQ(ierr);							/**/
-  /**/																	/**/
-  /**/		double *tmpepsopt;													/**/
-  /**/		FILE *tmpptf;														/**/
-  /**/		tmpepsopt = (double *) malloc(DegFree*sizeof(double));									/**/
-  /**/		tmpptf = fopen(initialdatafile,"r");											/**/
-  /**/		int itmp;														/**/
-  /**/		for (itmp=0;itmp<DegFree;itmp++)											/**/
-  /**/		{ 															/**/
-  /**/ 			fscanf(tmpptf,"%lf",&tmpepsopt[itmp]);										/**/
-  /**/		}															/**/
-  /**/		fclose(tmpptf);														/**/
-  /**/																	/**/
-  /**/		ierr=ArrayToVec(tmpepsopt, tmpepsSReal); CHKERRQ(ierr);									/**/
-  /**/		ierr=MatMult(A,tmpepsSReal,tmpepsFReal); CHKERRQ(ierr);									/**/
-  /**/		ierr=VecPointwiseMult(tmpepsFReal,tmpepsFReal,epsI); CHKERRQ(ierr);							/**/
-  /**/		ierr = VecAXPY(tmpepsFReal,1.0,epsmedium1); CHKERRQ(ierr);								/**/
-  /**/		OutputVec(PETSC_COMM_WORLD, tmpepsFReal, "slab_","epsC.m");								/**/
-  /**/		PetscPrintf(PETSC_COMM_WORLD,"--------Created the slab with given 2d cross-section.--------\n ");CHKERRQ(ierr);		/**/
-  /**/		free(tmpepsopt);													/**/
-  /**/		VecDestroy(&tmpepsSReal);												/**/
-  /**/		VecDestroy(&tmpepsFReal);												/**/
-  /**/	};																/**/
+  /**/int threeDim;/**/
+  /**/PetscOptionsGetInt(PETSC_NULL,"-threeDim",&threeDim,&flg);/**/
+  /**/if(!flg) threeDim=0;/**/
+  /**/if(threeDim){/**/
+    /**/ierr = PetscPrintf(PETSC_COMM_WORLD,"--------Interpolation matrix A has been set up.--------\n ");CHKERRQ(ierr);/**/
+    /**/Vec tmpepsSReal, tmpepsFReal;/**/
+    /**/ierr = MatCreateVecs(A,&tmpepsSReal, &tmpepsFReal); CHKERRQ(ierr);/**/
+    /**//**/
+    /**/double *tmpepsopt;/**/
+    /**/FILE *tmpptf;/**/
+    /**/tmpepsopt = (double *) malloc(DegFree*sizeof(double));/**/
+    /**/tmpptf = fopen(initialdatafile,"r");/**/
+    /**/int itmp;/**/
+    /**/for (itmp=0;itmp<DegFree;itmp++)/**/
+      /**/{ /**/
+      /**/ fscanf(tmpptf,"%lf",&tmpepsopt[itmp]);/**/
+      /**/}/**/
+    /**/fclose(tmpptf);/**/
+    /**//**/
+    /**/ierr=ArrayToVec(tmpepsopt, tmpepsSReal); CHKERRQ(ierr);/**/
+    /**/ierr=MatMult(A,tmpepsSReal,tmpepsFReal); CHKERRQ(ierr);/**/
+    /**/ierr=VecPointwiseMult(tmpepsFReal,tmpepsFReal,epsI); CHKERRQ(ierr);/**/
+    /**/ierr = VecAXPY(tmpepsFReal,1.0,epsmedium1); CHKERRQ(ierr);/**/
+    /**/OutputVec(PETSC_COMM_WORLD, tmpepsFReal, "slab_","epsC.m");/**/
+    /**/PetscPrintf(PETSC_COMM_WORLD,"--------Created the slab with given 2d cross-section.--------\n ");CHKERRQ(ierr);/**/
+    /**/free(tmpepsopt);/**/
+    /**/VecDestroy(&tmpepsSReal);/**/
+    /**/VecDestroy(&tmpepsFReal);/**/
+    /**/};/**/
   /************************************************This creates a slab out of a given 2d cross-section*************************************/
 
 
@@ -499,19 +499,19 @@ int main(int argc, char **argv)
   ierr = PetscPrintf(PETSC_COMM_WORLD,"--------Everything set up! Ready to calculate the overlap and gradient.--------\n ");CHKERRQ(ierr);
 
 
-/**************************************************************************************************************************************************************/
-/**************************************************************************************************************************************************************/
-/**************************************************************************************************************************************************************/
-/**************************************************************************************************************************************************************/
-/**************************************************************************************************************************************************************/
+  /**************************************************************************************************************************************************************/
+  /**************************************************************************************************************************************************************/
+  /**************************************************************************************************************************************************************/
+  /**************************************************************************************************************************************************************/
+  /**************************************************************************************************************************************************************/
 
-/*-------------------------------------------------------------------------*/
-  	ierr=ArrayToVec(epsopt, epsSReal); CHKERRQ(ierr);									
-        ierr=MatMult(A,epsSReal,epsFReal); CHKERRQ(ierr);									
-  	ierr=VecPointwiseMult(epsFReal,epsFReal,epsI); CHKERRQ(ierr);							
-  	ierr = VecAXPY(epsFReal,1.0,epsmedium1); CHKERRQ(ierr);								
-  	OutputVec(PETSC_COMM_WORLD, epsFReal, "initial_","epsF.m");
-/*-------------------------------------------------------------------------*/
+  /*-------------------------------------------------------------------------*/
+  ierr=ArrayToVec(epsopt, epsSReal); CHKERRQ(ierr);
+  ierr=MatMult(A,epsSReal,epsFReal); CHKERRQ(ierr);
+  ierr=VecPointwiseMult(epsFReal,epsFReal,epsI); CHKERRQ(ierr);
+  ierr = VecAXPY(epsFReal,1.0,epsmedium1); CHKERRQ(ierr);
+  OutputVec(PETSC_COMM_WORLD, epsFReal, "initial_","epsF.m");
+  /*-------------------------------------------------------------------------*/
 
   ierr = PetscPrintf(PETSC_COMM_WORLD,"--------We proceed to Job.--------\n ");CHKERRQ(ierr);
 
@@ -520,142 +520,142 @@ int main(int argc, char **argv)
   
   //LDOSdataGroup ldos1data = {omega1, M1, A, x1, b1, weightedJ1, epspmlQ1, epsmedium1, epsI,  &its1, epscoef1, vgrad, ksp1};
     
-if (Job==1){
+  if (Job==1){
 
-  /*---------Calculate the overlap and gradient--------*/
-  int px, py, pz=0;
-  double beta=0;
-  double s1, ds, s2, epscen;
+    /*---------Calculate the overlap and gradient--------*/
+    int px, py, pz=0;
+    double beta=0;
+    double s1, ds, s2, epscen;
   
-  PetscOptionsGetInt(PETSC_NULL,"-px",&px,&flg);  MyCheckAndOutputInt(flg,px,"px","px");
-  PetscOptionsGetInt(PETSC_NULL,"-py",&py,&flg);  MyCheckAndOutputInt(flg,py,"py","py");
-  PetscOptionsGetReal(PETSC_NULL,"-s1",&s1,&flg); MyCheckAndOutputDouble(flg,s1,"s1","s1");
-  PetscOptionsGetReal(PETSC_NULL,"-s2",&s2,&flg); MyCheckAndOutputDouble(flg,s2,"s2","s2");
-  PetscOptionsGetReal(PETSC_NULL,"-ds",&ds,&flg); MyCheckAndOutputDouble(flg,ds,"ds","ds");
+    PetscOptionsGetInt(PETSC_NULL,"-px",&px,&flg);  MyCheckAndOutputInt(flg,px,"px","px");
+    PetscOptionsGetInt(PETSC_NULL,"-py",&py,&flg);  MyCheckAndOutputInt(flg,py,"py","py");
+    PetscOptionsGetReal(PETSC_NULL,"-s1",&s1,&flg); MyCheckAndOutputDouble(flg,s1,"s1","s1");
+    PetscOptionsGetReal(PETSC_NULL,"-s2",&s2,&flg); MyCheckAndOutputDouble(flg,s2,"s2","s2");
+    PetscOptionsGetReal(PETSC_NULL,"-ds",&ds,&flg); MyCheckAndOutputDouble(flg,ds,"ds","ds");
 
-  int posMj=(px*My+ py)*Mz + pz;
-  for (epscen=s1;epscen<s2;epscen+=ds)
-  { 
-      epsopt[posMj]=epscen; 
-      PetscOptionsGetReal(PETSC_NULL,"-ldospowerindex",&ldospowerindex,&flg);
-      if(!flg) ldospowerindex=2.0;
-      PetscPrintf(PETSC_COMM_WORLD,"---------ldospowerindex is %g \n",ldospowerindex);
-      THGdataGroup thgdata={epsSReal,epsFReal,M1,x1,weightedJ1,b1,ej,epsI,epspmlQ1,epsmedium1,epscoef1,omega1,M2,epsII,epspmlQ2,epsmedium2,epscoef2,omega2,ksp1,ksp2,ldospowerindex,outputbase};
+    int posMj=(px*My+ py)*Mz + pz;
+    for (epscen=s1;epscen<s2;epscen+=ds)
+      { 
+	epsopt[posMj]=epscen; 
+	PetscOptionsGetReal(PETSC_NULL,"-ldospowerindex",&ldospowerindex,&flg);
+	if(!flg) ldospowerindex=2.0;
+	PetscPrintf(PETSC_COMM_WORLD,"---------ldospowerindex is %g \n",ldospowerindex);
+	THGdataGroup thgdata={epsSReal,epsFReal,M1,x1,weightedJ1,b1,ej,epsI,epspmlQ1,epsmedium1,epscoef1,omega1,M2,epsII,epspmlQ2,epsmedium2,epscoef2,omega2,ksp1,ksp2,ldospowerindex,outputbase};
 
-      beta = thgfom_arbitraryPol(DegFree,epsopt,grad,&thgdata);
+	beta = thgfom_arbitraryPol(DegFree,epsopt,grad,&thgdata);
       
-      PetscPrintf(PETSC_COMM_WORLD,"epscen: %g objfunc: %g objfunc-grad: %g \n", epsopt[posMj], beta, grad[posMj]);
+	PetscPrintf(PETSC_COMM_WORLD,"epscen: %g objfunc: %g objfunc-grad: %g \n", epsopt[posMj], beta, grad[posMj]);
+      }
+
+
+  }
+ 
+  if (Job==2){
+
+    PetscPrintf(PETSC_COMM_WORLD,"-----------Begin setting up the optimization problem for THG.-----\n");
+
+    /*---------Optimization--------*/
+    double mylb=0, myub=1.0, *lb=NULL, *ub=NULL;
+    int maxeval, maxtime, mynloptalg;
+    double maxf;
+    nlopt_opt  opt;
+    int mynloptlocalalg;
+    nlopt_opt local_opt;
+    nlopt_result result;
+
+    PetscOptionsGetInt(PETSC_NULL,"-maxeval",&maxeval,&flg);  MyCheckAndOutputInt(flg,maxeval,"maxeval","max number of evaluation");
+    PetscOptionsGetInt(PETSC_NULL,"-maxtime",&maxtime,&flg);  MyCheckAndOutputInt(flg,maxtime,"maxtime","max time of evaluation");
+    PetscOptionsGetInt(PETSC_NULL,"-mynloptalg",&mynloptalg,&flg);  MyCheckAndOutputInt(flg,mynloptalg,"mynloptalg","The algorithm used ");
+    PetscOptionsGetInt(PETSC_NULL,"-mynloptlocalalg",&mynloptlocalalg,&flg);  MyCheckAndOutputInt(flg,mynloptlocalalg,"mynloptlocalalg","The local optimization algorithm used ");
+
+    lb = (double *) malloc(DegFree*sizeof(double));
+    ub = (double *) malloc(DegFree*sizeof(double));
+    if(!readlubsfromfile) {
+      for(i=0;i<DegFree;i++)
+	{
+	  lb[i] = mylb;
+	  ub[i] = myub;
+	}
+    }else {
+      char lbfile[PETSC_MAX_PATH_LEN], ubfile[PETSC_MAX_PATH_LEN];
+      PetscOptionsGetString(PETSC_NULL,"-lbfile",lbfile,PETSC_MAX_PATH_LEN,&flg); MyCheckAndOutputChar(flg,lbfile,"lbfile","Lower-bound file");
+      PetscOptionsGetString(PETSC_NULL,"-ubfile",ubfile,PETSC_MAX_PATH_LEN,&flg); MyCheckAndOutputChar(flg,ubfile,"ubfile","Upper-bound file");
+      ptf = fopen(lbfile,"r");
+      for (i=0;i<DegFree;i++)
+	{ 
+	  fscanf(ptf,"%lf",&lb[i]);
+	}
+      fclose(ptf);
+     
+      ptf = fopen(ubfile,"r");
+      for (i=0;i<DegFree;i++)
+	{ 
+	  fscanf(ptf,"%lf",&ub[i]);
+	}
+      fclose(ptf);
+     
+    }
+
+    opt = nlopt_create(mynloptalg, DegFree);
+    nlopt_set_lower_bounds(opt,lb);
+    nlopt_set_upper_bounds(opt,ub);
+    nlopt_set_maxeval(opt,maxeval);
+    nlopt_set_maxtime(opt,maxtime);
+    if (mynloptalg==11) nlopt_set_vector_storage(opt,4000);
+    if (mynloptlocalalg)
+      {
+	PetscPrintf(PETSC_COMM_WORLD,"-----------Running with a local optimizer.---------\n");
+	local_opt=nlopt_create(mynloptlocalalg,DegFree);
+	nlopt_set_ftol_rel(local_opt, 1e-14);
+	nlopt_set_maxeval(local_opt,100000);
+	nlopt_set_local_optimizer(opt,local_opt);
+      }
+
+    PetscOptionsGetReal(PETSC_NULL,"-ldospowerindex",&ldospowerindex,&flg);
+    if(!flg) ldospowerindex=2.0;
+    PetscPrintf(PETSC_COMM_WORLD,"---------ldospowerindex is %g \n",ldospowerindex);
+
+    THGdataGroup thgdata={epsSReal,epsFReal,M1,x1,weightedJ1,b1,ej,epsI,epspmlQ1,epsmedium1,epscoef1,omega1,M2,epsII,epspmlQ2,epsmedium2,epscoef2,omega2,ksp1,ksp2,ldospowerindex,outputbase};
+    PetscPrintf(PETSC_COMM_WORLD,"---------About to embark THG optimization. No minimum approach %d ....\n", minapproach);
+    nlopt_set_max_objective(opt,thgfom_arbitraryPol,&thgdata);
+   
+    PetscPrintf(PETSC_COMM_WORLD,"---------Optimization about to occur. \n");
+    result = nlopt_optimize(opt,epsopt,&maxf);    //********************optimization here!********************//
+
+    if (result < 0)
+      PetscPrintf(PETSC_COMM_WORLD,"nlopt failed! \n", result);
+    else
+      PetscPrintf(PETSC_COMM_WORLD,"found extremum  %0.16e\n", minapproach?1.0/maxf:maxf);
+
+    PetscPrintf(PETSC_COMM_WORLD,"nlopt returned value is %d \n", result);
+
+    free(lb);
+    free(ub);
+    nlopt_destroy(opt);
+
+    int rankA;
+    MPI_Comm_rank(PETSC_COMM_WORLD, &rankA);
+
+    if(rankA==0)
+      {
+	ptf = fopen(strcat(filenameComm,"epsopt.txt"),"w");
+	for (i=0;i<DegFree;i++)
+	  fprintf(ptf,"%0.16e \n",epsopt[i]);
+	fclose(ptf);
+      }
+
   }
 
-
- }
  
- if (Job==2){
-
-   PetscPrintf(PETSC_COMM_WORLD,"-----------Begin setting up the optimization problem for THG.-----\n");
-
-   /*---------Optimization--------*/
-   double mylb=0, myub=1.0, *lb=NULL, *ub=NULL;
-   int maxeval, maxtime, mynloptalg;
-   double maxf;
-   nlopt_opt  opt;
-   int mynloptlocalalg;
-   nlopt_opt local_opt;
-   nlopt_result result;
-
-   PetscOptionsGetInt(PETSC_NULL,"-maxeval",&maxeval,&flg);  MyCheckAndOutputInt(flg,maxeval,"maxeval","max number of evaluation");
-   PetscOptionsGetInt(PETSC_NULL,"-maxtime",&maxtime,&flg);  MyCheckAndOutputInt(flg,maxtime,"maxtime","max time of evaluation");
-   PetscOptionsGetInt(PETSC_NULL,"-mynloptalg",&mynloptalg,&flg);  MyCheckAndOutputInt(flg,mynloptalg,"mynloptalg","The algorithm used ");
-   PetscOptionsGetInt(PETSC_NULL,"-mynloptlocalalg",&mynloptlocalalg,&flg);  MyCheckAndOutputInt(flg,mynloptlocalalg,"mynloptlocalalg","The local optimization algorithm used ");
-
-   lb = (double *) malloc(DegFree*sizeof(double));
-   ub = (double *) malloc(DegFree*sizeof(double));
-   if(!readlubsfromfile) {
-     for(i=0;i<DegFree;i++)
-       {
-	 lb[i] = mylb;
-	 ub[i] = myub;
-       }
-   }else {
-     char lbfile[PETSC_MAX_PATH_LEN], ubfile[PETSC_MAX_PATH_LEN];
-     PetscOptionsGetString(PETSC_NULL,"-lbfile",lbfile,PETSC_MAX_PATH_LEN,&flg); MyCheckAndOutputChar(flg,lbfile,"lbfile","Lower-bound file");
-     PetscOptionsGetString(PETSC_NULL,"-ubfile",ubfile,PETSC_MAX_PATH_LEN,&flg); MyCheckAndOutputChar(flg,ubfile,"ubfile","Upper-bound file");
-     ptf = fopen(lbfile,"r");
-     for (i=0;i<DegFree;i++)
-       { 
-	 fscanf(ptf,"%lf",&lb[i]);
-       }
-     fclose(ptf);
-     
-     ptf = fopen(ubfile,"r");
-     for (i=0;i<DegFree;i++)
-       { 
-	 fscanf(ptf,"%lf",&ub[i]);
-       }
-     fclose(ptf);
-     
-   }
-
-   opt = nlopt_create(mynloptalg, DegFree);
-   nlopt_set_lower_bounds(opt,lb);
-   nlopt_set_upper_bounds(opt,ub);
-   nlopt_set_maxeval(opt,maxeval);
-   nlopt_set_maxtime(opt,maxtime);
-   if (mynloptalg==11) nlopt_set_vector_storage(opt,4000);
-   if (mynloptlocalalg)
-     {
-       PetscPrintf(PETSC_COMM_WORLD,"-----------Running with a local optimizer.---------\n");
-       local_opt=nlopt_create(mynloptlocalalg,DegFree);
-       nlopt_set_ftol_rel(local_opt, 1e-14);
-       nlopt_set_maxeval(local_opt,100000);
-       nlopt_set_local_optimizer(opt,local_opt);
-     }
-
-   PetscOptionsGetReal(PETSC_NULL,"-ldospowerindex",&ldospowerindex,&flg);
-   if(!flg) ldospowerindex=2.0;
-   PetscPrintf(PETSC_COMM_WORLD,"---------ldospowerindex is %g \n",ldospowerindex);
-
-   THGdataGroup thgdata={epsSReal,epsFReal,M1,x1,weightedJ1,b1,ej,epsI,epspmlQ1,epsmedium1,epscoef1,omega1,M2,epsII,epspmlQ2,epsmedium2,epscoef2,omega2,ksp1,ksp2,ldospowerindex,outputbase};
-   PetscPrintf(PETSC_COMM_WORLD,"---------About to embark THG optimization. No minimum approach %d ....\n", minapproach);
-   nlopt_set_max_objective(opt,thgfom_arbitraryPol,&thgdata);
-   
-   PetscPrintf(PETSC_COMM_WORLD,"---------Optimization about to occur. \n");
-   result = nlopt_optimize(opt,epsopt,&maxf);    //********************optimization here!********************//
-
-   if (result < 0)
-     PetscPrintf(PETSC_COMM_WORLD,"nlopt failed! \n", result);
-   else
-     PetscPrintf(PETSC_COMM_WORLD,"found extremum  %0.16e\n", minapproach?1.0/maxf:maxf);
-
-   PetscPrintf(PETSC_COMM_WORLD,"nlopt returned value is %d \n", result);
-
-   free(lb);
-   free(ub);
-   nlopt_destroy(opt);
-
-   int rankA;
-   MPI_Comm_rank(PETSC_COMM_WORLD, &rankA);
-
-   if(rankA==0)
-     {
-       ptf = fopen(strcat(filenameComm,"epsopt.txt"),"w");
-       for (i=0;i<DegFree;i++)
-	 fprintf(ptf,"%0.16e \n",epsopt[i]);
-       fclose(ptf);
-     }
-
- }
-
- 
-/*------------------------------------------------*/
-/*------------------------------------------------*/
-/*------------------------------------------------*/
-/*------------------------------------------------*/
-/*------------------------------------------------*/
-/*------------------------------------------------*/
+  /*------------------------------------------------*/
+  /*------------------------------------------------*/
+  /*------------------------------------------------*/
+  /*------------------------------------------------*/
+  /*------------------------------------------------*/
+  /*------------------------------------------------*/
   ierr = PetscPrintf(PETSC_COMM_WORLD,"--------Done!--------\n ");CHKERRQ(ierr);
 
-/* ----------------------Destroy Vecs and Mats----------------------------*/ 
+  /* ----------------------Destroy Vecs and Mats----------------------------*/ 
   ierr = MatDestroy(&A); CHKERRQ(ierr);
   ierr = MatDestroy(&B); CHKERRQ(ierr);
   ierr = MatDestroy(&C); CHKERRQ(ierr);
@@ -750,8 +750,8 @@ double materialfraction(int DegFree,double *epsopt, double *grad, void *data)
   
   sumeps=0.0;
   for (i=0;i<DegFree;i++){
-          sumeps+=epsopt[i];
-	  grad[i]=-1.0/(double)Mx;
+    sumeps+=epsopt[i];
+    grad[i]=-1.0/(double)Mx;
   }
 
   PetscPrintf(PETSC_COMM_WORLD,"******the current material fraction is %1.6e \n",sumeps/(double)Mx);
@@ -770,21 +770,21 @@ PetscErrorCode setupKSP(MPI_Comm comm, KSP *kspout, PC *pcout, int solver, int i
   ierr = KSPGetPC(ksp,&pc);CHKERRQ(ierr);
   ierr = PCSetType(pc,PCLU);CHKERRQ(ierr);
   if (solver==0) {
-  ierr = PCFactorSetMatSolverPackage(pc,MATSOLVERPASTIX);CHKERRQ(ierr);
+    ierr = PCFactorSetMatSolverPackage(pc,MATSOLVERPASTIX);CHKERRQ(ierr);
   }
   else if (solver==1){
-  ierr = PCFactorSetMatSolverPackage(pc,MATSOLVERMUMPS);CHKERRQ(ierr);
+    ierr = PCFactorSetMatSolverPackage(pc,MATSOLVERMUMPS);CHKERRQ(ierr);
   }
   else {
-  ierr = PCFactorSetMatSolverPackage(pc,MATSOLVERSUPERLU_DIST);CHKERRQ(ierr);
+    ierr = PCFactorSetMatSolverPackage(pc,MATSOLVERSUPERLU_DIST);CHKERRQ(ierr);
   }
   ierr = KSPSetTolerances(ksp,1e-14,PETSC_DEFAULT,PETSC_DEFAULT,maxit);CHKERRQ(ierr);
 
   if (iteronly==1){
-  ierr = KSPSetType(ksp, KSPLSQR);CHKERRQ(ierr);
-  ierr = PCSetType(pc,PCNONE);CHKERRQ(ierr);
-  ierr = KSPSetTolerances(ksp,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT);CHKERRQ(ierr);
-  ierr = KSPMonitorSet(ksp,KSPMonitorTrueResidualNorm,NULL,0);CHKERRQ(ierr);
+    ierr = KSPSetType(ksp, KSPLSQR);CHKERRQ(ierr);
+    ierr = PCSetType(pc,PCNONE);CHKERRQ(ierr);
+    ierr = KSPSetTolerances(ksp,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT);CHKERRQ(ierr);
+    ierr = KSPMonitorSet(ksp,KSPMonitorTrueResidualNorm,NULL,0);CHKERRQ(ierr);
   }
 
   ierr = PCSetFromOptions(pc);
@@ -796,4 +796,3 @@ PetscErrorCode setupKSP(MPI_Comm comm, KSP *kspout, PC *pcout, int solver, int i
   PetscFunctionReturn(0);
 
 }
-

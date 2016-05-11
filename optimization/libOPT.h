@@ -23,6 +23,73 @@ typedef struct{
   int Ny;
   int Nz;
   double hxyz;
+  Vec epsSReal;
+  Vec epsFReal;
+  double omega1;
+  double omega2;
+  double omega3;
+  Mat M1;
+  Mat M2;
+  Mat M3;
+  Mat A;
+  Vec b1;
+  Vec b2;
+  Vec x1;
+  Vec x2;
+  Vec weightedJ1;
+  Vec weightedJ2;
+  Vec epspmlQ1;
+  Vec epspmlQ2;
+  Vec epspmlQ3;
+  Vec epsmedium1;
+  Vec epsmedium2;
+  Vec epsmedium3;
+  Vec epsDiff1;
+  Vec epsDiff2;
+  Vec epsDiff3;
+  Vec epscoef1;
+  Vec epscoef2;
+  Vec epscoef3;
+  Mat B1;
+  Mat B2;
+  KSP ksp1;
+  KSP ksp2;
+  KSP ksp3;
+  int *its1;
+  int *its2;
+  int *its3;
+  double p1;
+  double p2;
+  int outputbase;
+} SFGdataGroup;
+
+
+typedef struct{
+  double omega;
+  Mat M;
+  Mat A;
+  Vec xL;
+  Vec xR;
+  Vec bL;
+  Vec bR;
+  Vec weightedJL;
+  Vec weightedJR;
+  Vec epspmlQ;
+  Vec epsmedium;
+  Vec epsDiff;
+  int *its;
+  Vec epscoef;
+  Vec vgrad;
+  KSP ksp;
+  double chiralweight;
+  int fomopt;
+} ChiraldataGroup;
+
+typedef struct{
+  int Nx;
+  int Ny;
+  int Nz;
+  double hxyz;
   double omega;
   KSP ksp;
   int *its;
@@ -141,6 +208,8 @@ PetscErrorCode ModifyMatDiag(Mat Mopr, Mat D, Vec epsF, Vec epsDiff, Vec epsMedi
 // from MatVecMaker.c
 PetscErrorCode GetDotMat(MPI_Comm comm, Mat *Bout, int Nx, int Ny, int Nz);
 
+PetscErrorCode GetProjMat(MPI_Comm comm, Mat *Bout, int c1, int c2, int Nx, int Ny, int Nz);
+
 PetscErrorCode ImagIMat(MPI_Comm comm, Mat *Dout, int N);
 
 PetscErrorCode CongMat(MPI_Comm comm, Mat *Cout, int N);
@@ -159,6 +228,8 @@ PetscErrorCode GetUnitVec(Vec ej, int pol, int N);
 
 // from Output.c
 PetscErrorCode getreal(const char *flag, double *var, double autoval);
+
+PetscErrorCode getint(const char *flag, int *var, int autoval);
 
 PetscErrorCode  OutputVec(MPI_Comm comm, Vec x, const char *filenameComm, const char *filenameProperty);
 
@@ -242,8 +313,22 @@ double EPLDOS(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
 // from eigsolver.c
 int eigsolver(Mat M, Vec epsC, Mat D);
 
+// from eigsolvertrans.c
+int eigsolvertrans(Mat M, Vec epsC, Mat D, Mat C);
+
 // from thgfom_arbitraryPol.c
 double thgfom_arbitraryPol(int DegFree,double *epsopt, double *grad, void *data);
 
 // from ldoskonly.c
 double ldoskonly(int DegFree,double *epsopt, double *grad, void *data);
+
+// from chiral.c
+double ldoskdiff(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
+
+// from ldoskmin/maxconstraint.c
+double ldoskminconstraint(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
+
+double ldoskmaxconstraint(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
+
+// from sfg_arbitraryPol.c
+double sfg_arbitraryPol(int DegFree,double *epsopt, double *grad, void *data);

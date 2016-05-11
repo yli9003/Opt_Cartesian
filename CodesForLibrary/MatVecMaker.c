@@ -40,6 +40,49 @@ PetscErrorCode GetDotMat(MPI_Comm comm, Mat *Bout, int Nx, int Ny, int Nz)
   PetscFunctionReturn(0);
 }
 
+#undef __FUNCT__
+#define __FUNCT__ "GetProjMat"
+PetscErrorCode GetProjMat(MPI_Comm comm, Mat *Bout, int c1, int c2, int Nx, int Ny, int Nz)
+{
+  int Nc=3, N=2*Nc*Nx*Ny*Nz;
+  Mat B;
+  int ns,ne,i,j,ix,iy,iz,ic,iq;
+  double value=1;
+  int col;
+  PetscErrorCode ierr;
+  
+  MatCreate(comm, &B);
+  MatSetType(B,MATMPIAIJ);
+  MatSetSizes(B,PETSC_DECIDE, PETSC_DECIDE, N, N);
+  MatMPIAIJSetPreallocation(B, 1, PETSC_NULL, 1, PETSC_NULL);
+
+  ierr = MatGetOwnershipRange(B, &ns, &ne); CHKERRQ(ierr);
+
+  for (i = ns; i < ne; ++i) {
+    iz = (j = i) % Nz;
+    iy = (j /= Nz) % Ny;
+    ix = (j /= Ny) % Nx;
+    ic = (j /= Nx) % Nc;
+    iq =  j /= Nc;
+    
+    if(ic==c1){
+      col = iz + Nz*iy + Nz*Ny*ix + Nz*Ny*Nx*c2 + Nz*Ny*Nx*Nc*iq;
+      //col = iz + Nz * (iy + Ny * (ix + Nx * (c2 + Nc * iq)));
+      ierr = MatSetValue(B,i,col,value,INSERT_VALUES); CHKERRQ(ierr);
+    }
+
+
+  }
+
+  ierr = MatAssemblyBegin(B, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+  ierr = MatAssemblyEnd(B, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+
+  ierr = PetscObjectSetName((PetscObject) B,"ProjMatrix"); CHKERRQ(ierr);
+  
+  *Bout = B;
+  PetscFunctionReturn(0);
+}
+
 #undef __FUNCT__ 
 #define __FUNCT__ "ImagIMat"
 PetscErrorCode ImagIMat(MPI_Comm comm, Mat *Dout, int N)
