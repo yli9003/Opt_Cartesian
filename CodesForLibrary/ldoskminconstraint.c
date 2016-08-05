@@ -24,7 +24,6 @@ extern Mat Hfilt;
 extern KSP kspH;
 extern int itsH;
 
-// ldos - 1/t
 #undef __FUNCT__ 
 #define __FUNCT__ "ldoskminconstraint"
 double ldoskminconstraint(int DegFreeAll,double *epsoptAll, double *gradAll, void *data)
@@ -34,7 +33,7 @@ double ldoskminconstraint(int DegFreeAll,double *epsoptAll, double *gradAll, voi
 
   PetscPrintf(PETSC_COMM_WORLD,"********Entering the LDOS constraint solver (Full Vectorial Version). Minimum approach NOT available.********** \n");
 
-  LDOSdataGroup *ptdata = (LDOSdataGroup *) data;
+  LDOSdataGroupConstr *ptdata = (LDOSdataGroupConstr *) data;
 
   double omega = ptdata->omega;
   Mat 	 M = ptdata->M;
@@ -49,6 +48,7 @@ double ldoskminconstraint(int DegFreeAll,double *epsoptAll, double *gradAll, voi
   Vec    epscoef = ptdata->epscoef;  
   Vec    vgrad = ptdata->vgrad;
   KSP    ksp = ptdata->ksp;
+  double optweight = ptdata->optweight;
   
   //declare temporary variables
   Vec epsC, epsCi, epsP, tmp, Grad;
@@ -77,19 +77,19 @@ double ldoskminconstraint(int DegFreeAll,double *epsoptAll, double *gradAll, voi
   SolveMatrix(PETSC_COMM_WORLD,ksp,tmpM,b,x,its);
 
   /*-------------Calculate and print out the LDOS----------*/
-  //tmpldos = -Re(conj(wtJ)*E) 
+  //tmpldos = -Re((wt.*J^*)'*E) 
   double tmpldosr, tmpldosi, ldos;
   MatMult(C,weightedJ,tmp);
   CmpVecDot(x,tmp,&tmpldosr,&tmpldosi);
   ldos=-1.0*hxyz*tmpldosr;
-  PetscPrintf(PETSC_COMM_WORLD,"---*****The current ldos for omega %.4e at step %.5d is %.16e \n", omega/(2*PI),count,ldos);
+  PetscPrintf(PETSC_COMM_WORLD,"---*****The current (ldos,optwt*ldos,1/t) for omega %.4e at step %.5d is %.16e, %.16e and %.16e \n", omega/(2*PI),count,ldos,optweight*ldos,1/epsoptAll[DegFreeAll-1]);
 
   if (gradAll) {
     KSPSolveTranspose(ksp,weightedJ,tmp);
     MatMult(C,tmp,Grad);
     CmpVecProd(Grad,epscoef,tmp);
     CmpVecProd(tmp,x,Grad);
-    VecScale(Grad,-1.0*hxyz);
+    VecScale(Grad,-1.0*hxyz*optweight);
     ierr = VecPointwiseMult(Grad,Grad,vR); CHKERRQ(ierr);
 
     ierr = MatMultTranspose(A,Grad,vgrad);CHKERRQ(ierr);
@@ -99,7 +99,7 @@ double ldoskminconstraint(int DegFreeAll,double *epsoptAll, double *gradAll, voi
 
     ierr = VecToArray(epsgrad,gradAll,scatter,from,to,vgradlocal,DegFree);
 
-    gradAll[DegFreeAll-1]=1/(epsoptAll[DegFreeAll-1]*epsoptAll[DegFreeAll-1]);
+    gradAll[DegFreeAll-1]=1.0/(epsoptAll[DegFreeAll-1]*epsoptAll[DegFreeAll-1]);
 
   }
 
@@ -112,5 +112,37 @@ double ldoskminconstraint(int DegFreeAll,double *epsoptAll, double *gradAll, voi
   VecDestroy(&Grad);
   VecDestroy(&epsgrad);
 
-  return ldos - 1/epsoptAll[DegFreeAll-1];
+  return optweight*ldos - 1.0/epsoptAll[DegFreeAll-1];
 }
+
+/*
+#undef __FUNCT__ 
+#define __FUNCT__ "maxminobjfun"
+double maxminobjfun(int DegFreeAll,double *epsoptAll, double *gradAll, void *data)
+{
+
+  if(gradAll)
+    {
+      int i;
+      for (i=0;i<DegFreeAll-1;i++)
+	{
+	  gradAll[i]=0;
+	}
+      gradAll[DegFreeAll-1]=1;
+    }
+  
+  PetscPrintf(PETSC_COMM_WORLD,"**the current value of dummy objective variable is %.8e**\n",epsoptAll[DegFreeAll-1]);
+
+  char buffer [100];
+  int STORE=1;    
+  if(STORE==1 && (count%outputbase==0))
+    {
+      sprintf(buffer,"%.5depsSReal.m",count);
+      OutputVec(PETSC_COMM_WORLD, epsSReal, filenameComm, buffer);
+    }
+
+  count++;
+
+  return epsoptAll[DegFreeAll-1];
+}
+*/

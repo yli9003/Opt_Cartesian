@@ -54,6 +54,8 @@ double ldoskdiff(int DegFreeAll,double *epsoptAll, double *gradAll, void *data)
   double chiralweight = ptdata->chiralweight;
   int    fomopt = ptdata->fomopt;
 
+  if(chiralweight) PetscPrintf(PETSC_COMM_WORLD,"---Note that chiralweight is non-zero so we will be doing maxmin\n");
+
   //declare temporary variables
   Vec epsC, epsCi, epsP, tmp, Grad;
   Mat tmpM;
@@ -181,7 +183,9 @@ double ldoskdiff(int DegFreeAll,double *epsoptAll, double *gradAll, void *data)
   VecDestroy(&gradtotal);
 
 
-  if((chiralweight>0)==0){
+  if(chiralweight){
+    PetscPrintf(PETSC_COMM_WORLD,"---Note that chiralweight is non-zero so we don't increase the count here. \n");
+  }else{
     char buffer [100];
     int STORE=1;    
     if(STORE==1 && (count%outputbase==0))

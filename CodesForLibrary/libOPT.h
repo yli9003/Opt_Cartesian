@@ -19,6 +19,40 @@ typedef struct{
 } LDOSdataGroup;
 
 typedef struct{
+  double omega;
+  Mat M;
+  Mat A;
+  Vec x;
+  Vec b;
+  Vec weightedJ;
+  Vec epspmlQ;
+  Vec epsmedium;
+  Vec epsDiff;
+  int *its;
+  Vec epscoef;
+  Vec vgrad;
+  KSP ksp;
+  int nfreq;
+} LDOSdataGroupEpsOmega;
+
+typedef struct{
+  double omega;
+  Mat M;
+  Mat A;
+  Vec x;
+  Vec b;
+  Vec weightedJ;
+  Vec epspmlQ;
+  Vec epsmedium;
+  Vec epsDiff;
+  int *its;
+  Vec epscoef;
+  Vec vgrad;
+  KSP ksp;
+  double optweight;
+} LDOSdataGroupConstr;
+
+typedef struct{
   int Nx;
   int Ny;
   int Nz;
@@ -62,6 +96,52 @@ typedef struct{
   double p2;
   int outputbase;
 } SFGdataGroup;
+
+typedef struct{
+  int Nx;
+  int Ny;
+  int Nz;
+  double hxyz;
+  Vec epsSReal;
+  Vec epsFReal;
+  double omega1;
+  double omega2;
+  double omega3;
+  Mat M1;
+  Mat M2;
+  Mat M3;
+  Mat A;
+  Vec b1;
+  Vec b2;
+  Vec x1;
+  Vec x2;
+  Vec weightedJ1;
+  Vec weightedJ2;
+  Vec epspmlQ1;
+  Vec epspmlQ2;
+  Vec epspmlQ3;
+  Vec epsmedium1;
+  Vec epsmedium2;
+  Vec epsmedium3;
+  Vec epsDiff1;
+  Vec epsDiff2;
+  Vec epsDiff3;
+  Vec epscoef1;
+  Vec epscoef2;
+  Vec epscoef3;
+  Mat B1;
+  Mat B2;
+  KSP ksp1;
+  KSP ksp2;
+  KSP ksp3;
+  int *its1;
+  int *its2;
+  int *its3;
+  double p1;
+  double p2;
+  int outputbase;
+  Vec vecNL;
+} SFGdataGroupGraphene;
 
 
 typedef struct{
@@ -220,6 +300,8 @@ PetscErrorCode GetMediumVec(Vec epsmedium,int Nz, int Mz, double epsair, double 
 
 PetscErrorCode GetMediumVecwithSub(Vec epsmedium,int Nz, int Mz, double epsair, double epssub);
 
+PetscErrorCode GetMediumVecwithSub2(Vec epsmedium,int Nz, int Mz, double epsair, double epssub);
+
 PetscErrorCode GetRealPartVec(Vec vR, int N);
 
 PetscErrorCode AddMuAbsorption(double *muinv, Vec muinvpml, double Qabs, int add);
@@ -295,6 +377,15 @@ double ldosconstraint(int DegFreeAll,double *epsoptAll, double *gradAll, void *d
 // from ldoskconstraint.c
 double ldoskconstraint(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
 
+// from ldoskconstraintepsomega
+double ldoskconstraintepsomega(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
+
+// from ldoskminconstraint.c
+double ldoskminconstraint(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
+
+// from ldoskconstraintnofilter.c
+double ldoskconstraintnofilter(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
+
 double maxminobjfun(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
 
 // from lens.c
@@ -325,6 +416,9 @@ double ldoskonly(int DegFree,double *epsopt, double *grad, void *data);
 // from chiral.c
 double ldoskdiff(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
 
+// from chiral2.c
+double ldoskchiralconstraint(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
+
 // from ldoskmin/maxconstraint.c
 double ldoskminconstraint(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
 
@@ -332,3 +426,12 @@ double ldoskmaxconstraint(int DegFreeAll,double *epsoptAll, double *gradAll, voi
 
 // from sfg_arbitraryPol.c
 double sfg_arbitraryPol(int DegFree,double *epsopt, double *grad, void *data);
+
+// from sfg_singleldos.c
+double sfg_singleldos(int DegFree,double *epsopt, double *grad, void *data);
+
+// from sfg_graphene.c
+double sfg_graphene(int DegFree,double *epsopt, double *grad, void *data);
+
+// from c3v.c
+PetscErrorCode c3vinterp(MPI_Comm comm, Mat *Aout, int Mx, int My, int Nx, int Ny);

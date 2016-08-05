@@ -195,7 +195,6 @@ PetscErrorCode GetWeightVec(Vec weight,int Nx, int Ny, int Nz)
    PetscFunctionReturn(0);
 }
 
-
 #undef __FUNCT__ 
 #define __FUNCT__ "GetMediumVec"
 PetscErrorCode GetMediumVec(Vec epsmedium,int Nz, int Mz, double epsair, double epssub)
@@ -234,6 +233,32 @@ PetscErrorCode GetMediumVecwithSub(Vec epsmedium,int Nz, int Mz, double epsair, 
      {
        iz = i%Nz;
        if (iz<Nz/2 + Mz/2)
+	 value = epssub;
+       else
+	 value = epsair;
+        
+       VecSetValue(epsmedium, i, value, INSERT_VALUES);
+
+       }
+
+   ierr = VecAssemblyBegin(epsmedium); CHKERRQ(ierr);
+   ierr = VecAssemblyEnd(epsmedium); CHKERRQ(ierr);
+
+   PetscFunctionReturn(0);
+}
+
+#undef __FUNCT__ 
+#define __FUNCT__ "GetMediumVecwithSub2"
+PetscErrorCode GetMediumVecwithSub2(Vec epsmedium,int Nz, int Mz, double epsair, double epssub)
+{
+   PetscErrorCode ierr;
+   int i, iz, ns, ne;
+   double value;
+   ierr = VecGetOwnershipRange(epsmedium,&ns,&ne); CHKERRQ(ierr);
+   for(i=ns;i<ne; i++)
+     {
+       iz = i%Nz;
+       if (iz < (Nz-Mz)/2)
 	 value = epssub;
        else
 	 value = epsair;

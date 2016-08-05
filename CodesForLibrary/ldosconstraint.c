@@ -114,33 +114,3 @@ double ldosconstraint(int DegFreeAll,double *epsoptAll, double *gradAll, void *d
 
   return epsoptAll[DegFreeAll-1]-ldos;
 }
-
-#undef __FUNCT__ 
-#define __FUNCT__ "maxminobjfun"
-double maxminobjfun(int DegFreeAll,double *epsoptAll, double *gradAll, void *data)
-{
-
-  if(gradAll)
-    {
-      int i;
-      for (i=0;i<DegFreeAll-1;i++)
-	{
-	  gradAll[i]=0;
-	}
-      gradAll[DegFreeAll-1]=1;
-    }
-  
-  PetscPrintf(PETSC_COMM_WORLD,"**the current value of dummy objective variable is %.8e**\n",epsoptAll[DegFreeAll-1]);
-
-  char buffer [100];
-  int STORE=1;    
-  if(STORE==1 && (count%outputbase==0))
-    {
-      sprintf(buffer,"%.5depsSReal.m",count);
-      OutputVec(PETSC_COMM_WORLD, epsSReal, filenameComm, buffer);
-    }
-
-  count++;
-
-  return epsoptAll[DegFreeAll-1];
-}

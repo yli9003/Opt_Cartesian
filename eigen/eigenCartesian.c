@@ -92,7 +92,7 @@ int main(int argc, char **argv)
   PetscOptionsGetReal(PETSC_NULL,"-epsy",&epsy,&flg); MyCheckAndOutputDouble(flg,epsy,"epsy","epsy");
   PetscOptionsGetReal(PETSC_NULL,"-epsz",&epsz,&flg); MyCheckAndOutputDouble(flg,epsz,"epsz","epsz");
 
-  PetscOptionsGetReal(PETSC_NULL,"-epsmed",&epsair,&flg);
+  PetscOptionsGetReal(PETSC_NULL,"-epsair",&epsair,&flg);
   if(!flg) epsair=1.0;
   if(flg) MyCheckAndOutputDouble(flg,epsair,"epsair","Dielectric of surrounding medium");
   PetscOptionsGetReal(PETSC_NULL,"-epssub",&epssub,&flg);
@@ -176,7 +176,8 @@ int main(int argc, char **argv)
   /*-----Set up epsmedium, epsSReal, epsFReal ------*/
   ierr = VecDuplicate(vR,&epsmedium); CHKERRQ(ierr);
   //GetMediumVecwithSub(epsmedium,Nz,Mz,epsair,epssub);
-  GetMediumVec(epsmedium,Nz,Mz,epsair,epssub);
+  //GetMediumVec(epsmedium,Nz,Mz,epsair,epssub);
+  GetMediumVecwithSub2(epsmedium,Nz,Mz,epsair,epssub);
 
   ierr = MatCreateVecs(A,&epsSReal, &epsFReal); CHKERRQ(ierr);
 

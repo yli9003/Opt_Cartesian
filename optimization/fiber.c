@@ -311,8 +311,10 @@ int main(int argc, char **argv)
   ierr = VecDuplicate(vR,&epsmedium1); CHKERRQ(ierr);
   ierr = VecDuplicate(vR,&epsmedium2); CHKERRQ(ierr);
   //GetMediumVecwithSub(epsmedium,Nz,Mz,epsair,epssub);
-  GetMediumVec(epsmedium1,Nz,Mz,epsair,epssub1);
-  GetMediumVec(epsmedium2,Nz,Mz,epsair,epssub2);
+  //GetMediumVec(epsmedium1,Nz,Mz,epsair,epssub1);
+  //GetMediumVec(epsmedium2,Nz,Mz,epsair,epssub2);
+  GetMediumVecwithSub2(epsmedium1,Nz,Mz,epsair,epssub1);
+  GetMediumVecwithSub2(epsmedium2,Nz,Mz,epsair,epssub2);
 
   ierr = MatCreateVecs(A,&epsSReal, &epsFReal); CHKERRQ(ierr);
   
