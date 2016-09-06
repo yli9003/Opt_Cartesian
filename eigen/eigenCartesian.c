@@ -175,9 +175,13 @@ int main(int argc, char **argv)
 
   /*-----Set up epsmedium, epsSReal, epsFReal ------*/
   ierr = VecDuplicate(vR,&epsmedium); CHKERRQ(ierr);
+  int getmediumvec;
+  getint("-getmediumvec",&getmediumvec,1);
   //GetMediumVecwithSub(epsmedium,Nz,Mz,epsair,epssub);
-  //GetMediumVec(epsmedium,Nz,Mz,epsair,epssub);
-  GetMediumVecwithSub2(epsmedium,Nz,Mz,epsair,epssub);
+  if(getmediumvec) 
+    GetMediumVecwithSub2(epsmedium,Nz,Mz,epsair,epssub);
+  else
+    GetMediumVec(epsmedium,Nz,Mz,epsair,epssub);
 
   ierr = MatCreateVecs(A,&epsSReal, &epsFReal); CHKERRQ(ierr);
 

@@ -550,12 +550,15 @@ int main(int argc, char **argv)
   	ierr = VecAXPY(epsFReal,1.0,epsmedium1); CHKERRQ(ierr);								
   	OutputVec(PETSC_COMM_WORLD, epsFReal, "initial_","epsF.m");
 	
+	int printA;
+	getint("-printA",&printA,1);
+
 	if(imposec4v){
 	  Vec tmp;
 	  ierr = MatCreateVecs(A2,&tmp, &epsSquare); CHKERRQ(ierr);
 	  ierr = MatMult(A2,epsSReal,epsSquare); CHKERRQ(ierr);
 	  OutputVec(PETSC_COMM_WORLD, epsSquare, "c4veps",".m");
-	  OutputMat(PETSC_COMM_WORLD, A2, "c4vMatrix",".m");
+	  if(printA) OutputMat(PETSC_COMM_WORLD, A2, "c4vMatrix",".m");
 	  VecDestroy(&tmp);
 	}
 

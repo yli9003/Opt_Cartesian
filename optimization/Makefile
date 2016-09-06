@@ -1,4 +1,4 @@
-all: optexec sixmodes_exec c4vopt_exec EPopt_exec solver_exec fiber_exec blochdirac_exec degen_exec c4voptvar_exec penalty_exec penalty2_exec penalty3_exec c3vopt_exec c3vsolver_exec chiralopt_exec chiraloptmaxmin_exec sweepldos_exec sweepfreq_exec sfg_exec graphene_exec
+all: optexec sixmodes_exec c4vopt_exec EPopt_exec solver_exec fiber_exec blochdirac_exec degen_exec c4voptvar_exec penalty_exec penalty2_exec penalty3_exec c3vopt_exec c3vsolver_exec chiralopt_exec chiraloptmaxmin_exec sweepldos_exec sweepfreq_exec sfg_exec sfgGeneral_exec graphene_exec
 
 export PETSC_DIR=/opt/local/petsc-3.6.3
 export PETSC_ARCH=arch-opt
@@ -7,7 +7,7 @@ export NloptLibPath=/usr/local/lib/
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
-CLEANFILES = opt.o sixldos.o c4vopt.o EPopt.o solver.o fiber.o blochdirac.o degen.o c4voptvar.o penalty.o penalty2.o penalty3.o c3vopt.o c3vsolver.o chiralopt.o chiraloptmaxmin.o sweepldos.o sweepfreq.o sfg.o graphene.o
+CLEANFILES = opt.o sixldos.o c4vopt.o EPopt.o solver.o fiber.o blochdirac.o degen.o c4voptvar.o penalty.o penalty2.o penalty3.o c3vopt.o c3vsolver.o chiralopt.o chiraloptmaxmin.o sweepldos.o sweepfreq.o sfg.o sfgGeneral.o graphene.o
 
 optexec: opt.o 
 	$(CLINKER) opt.o -o optexec ${NloptLibPath}/libnlopt.a ${CavityLibPath}/libOPT.a $(PETSC_LIB)
@@ -103,6 +103,11 @@ sfg_exec: sfg.o
 	$(CLINKER) sfg.o -o sfg_exec ${NloptLibPath}/libnlopt.a ${CavityLibPath}/libOPT.a $(PETSC_LIB)
 sfg: sfg.o
 	$(CLINKER) -Wall -g -o $@ sfg.o 
+
+sfgGeneral_exec: sfgGeneral.o
+	$(CLINKER) sfgGeneral.o -o sfgGeneral_exec ${NloptLibPath}/libnlopt.a ${CavityLibPath}/libOPT.a $(PETSC_LIB)
+sfgGeneral: sfgGeneral.o
+	$(CLINKER) -Wall -g -o $@ sfgGeneral.o 
 
 graphene_exec: graphene.o
 	$(CLINKER) graphene.o -o graphene_exec ${NloptLibPath}/libnlopt.a ${CavityLibPath}/libOPT.a $(PETSC_LIB)

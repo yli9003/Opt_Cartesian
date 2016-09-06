@@ -251,11 +251,18 @@ PetscErrorCode SourceDuplicate(MPI_Comm comm, Vec *bout, int Nx, int Ny, int Nz,
 PetscErrorCode SourceBlock(MPI_Comm comm, Vec *bout, int Nx, int Ny, int Nz, double hx, double hy, double hz, double lx, double ux, double ly, double uy, double lz, double uz, double amp, int Jdir);
 
 // from PML.c
+double sqr(double a);
+
 double pmlsigma(double RRT, double d);
 
 PetscErrorCode EpsPMLFull(MPI_Comm comm, Vec epspml, int Nx, int Ny, int Nz, int Npmlx, int Npmly, int Npmlz, double sigmax, double sigmay, double sigmaz, double omega, int LowerPML);
 
 PetscErrorCode MuinvPMLFull(MPI_Comm comm, Vec *muinvout, int Nx, int Ny, int Nz, int Npmlx, int Npmly, int Npmlz, double sigmax, double sigmay, double sigmaz, double omega, int LowerPML);
+
+// from PMLGeneral.c
+PetscErrorCode EpsPMLGeneral(MPI_Comm comm, Vec epspml, int Nx, int Ny, int Nz, int Npmlx, int Npmly, int Npmlz, double sigmax, double sigmay, double sigmaz, double omega, int LowerPMLx, int LowerPMLy, int LowerPMLz);
+
+PetscErrorCode MuinvPMLGeneral(MPI_Comm comm, Vec *muinvout, int Nx, int Ny, int Nz, int Npmlx, int Npmly, int Npmlz, double sigmax, double sigmay, double sigmaz, double omega, int LowerPMLx, int LowerPMLy, int LowerPMLz);
 
 // from Eps.c 
 PetscErrorCode EpsCombine(Mat D, Vec weight, Vec epspml, Vec epspmlQ, Vec epscoef, double Qabs, double omega, Vec epsilon);
@@ -359,6 +366,10 @@ PetscErrorCode applyfiltersVer2(int DegFree, double *epsopt, Vec epsSReal, Vec e
 
 PetscErrorCode GetH(MPI_Comm comm, Mat *Hout, int mx, int my, int mz, double s, double nR, int dim, KSP *kspHout, PC *pcHout);
 
+PetscErrorCode GetHdummy(MPI_Comm comm, Mat *Hout, int DegFree, KSP *kspHout, PC *pcHout);
+
+PetscErrorCode GetH1d(MPI_Comm comm, Mat *Hout, int DegFree, double s, double nR, KSP *kspHout, PC *pcHout);
+
 PetscErrorCode SolveH(MPI_Comm comm, KSP ksp, Mat H, Vec rhs, Vec sol);
 
 PetscErrorCode RegzProj(int DegFree, double *epsopt,Vec epsSReal,Vec epsgrad,int pSIMP,double bproj,double etaproj,KSP kspH,Mat Hfilt,int *itsH);
@@ -435,3 +446,12 @@ double sfg_graphene(int DegFree,double *epsopt, double *grad, void *data);
 
 // from c3v.c
 PetscErrorCode c3vinterp(MPI_Comm comm, Mat *Aout, int Mx, int My, int Nx, int Ny);
+
+// from Qbooster.c
+PetscErrorCode boosterinterp(MPI_Comm comm, Mat *Aout, int Nx, int Ny, int Nz, int Nxo, int Nyo, int Nzo, int Mx, int My, int Mz, int Mzslab, int Lz, int anisotropic);
+
+PetscErrorCode makethreelayeredepsbkg(Vec epsBkg, int Nx, int Ny, int Nz, int Nzo, int Mz, double epsbkg1, double epsbkg2, double epsbkg3);
+
+PetscErrorCode makethreelayeredepsdiff(Vec epsDiff, int Nx, int Ny, int Nz, int Nzo, int Mz, double epsdiff1, double epsdiff2, double epsdiff3);
+
+PetscErrorCode GetWeightVecGeneralSym(Vec weight,int Nx, int Ny, int Nz, int lx, int ly, int lz);

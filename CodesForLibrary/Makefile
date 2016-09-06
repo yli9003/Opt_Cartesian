@@ -1,4 +1,4 @@
-all: MoperatorGeneral.o MoperatorGeneralBloch_XdL.o SourceGeneration.o PML.o Eps.o MathTools.o MatVecMaker.o Output.o DifferentialOps.o mympisetup.o ldos.o projsimpoverlap.o singleldos.o ldosonly.o filters.o alpha.o FOM.o thgfom_arbitraryPol.o ldosconstraint.o ldoskconstraint.o ldoskconstraintepsomega.o ldoskconstraintnofilter.o ldoskonly.o lens.o c4v.o EP.o eigsolver.o eigsolvertrans.o chiral.o chiral2.o ldoskmaxconstraint.o ldoskminconstraint.o sfg_arbitraryPol.o sfg_singleldos.o sfg_graphene.o c3v.o
+all: MoperatorGeneral.o MoperatorGeneralBloch_XdL.o SourceGeneration.o PML.o PMLGeneral.o Eps.o MathTools.o MatVecMaker.o Output.o DifferentialOps.o mympisetup.o ldos.o projsimpoverlap.o singleldos.o ldosonly.o filters.o alpha.o FOM.o thgfom_arbitraryPol.o ldosconstraint.o ldoskconstraint.o ldoskconstraintepsomega.o ldoskconstraintnofilter.o ldoskonly.o lens.o c4v.o EP.o eigsolver.o eigsolvertrans.o chiral.o chiral2.o ldoskmaxconstraint.o ldoskminconstraint.o sfg_arbitraryPol.o sfg_singleldos.o sfg_graphene.o c3v.o Qbooster.o
 
 export PETSC_DIR=/opt/local/petsc-3.6.3
 export PETSC_ARCH=arch-opt
@@ -7,7 +7,7 @@ export SLEPC_DIR=/opt/local/slepc-3.6.2
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 include ${SLEPC_DIR}/lib/slepc/conf/slepc_common
-CLEANFILES =  MoperatorGeneral.o MoperatorGeneralBloch_XdL.o SourceGeneration.o PML.o Eps.o MathTools.o MatVecMaker.o Output.o DifferentialOps.o mympisetup.o ldos.o projsimpoverlap.o singleldos.o ldosonly.o filters.o alpha.o FOM.o thgfom_arbitraryPol.o ldosconstraint.o ldoskconstraint.o ldoskconstraintepsomega.o ldoskconstraintnofilter.o ldoskonly.o lens.o c4v.o EP.o eigsolver.o eigsolvertrans.o chiral.o chiral2.o ldoskmaxconstraint.o ldoskminconstraint.o sfg_arbitraryPol.o sfg_singleldos.o sfg_graphene.o c3v.o
+CLEANFILES =  MoperatorGeneral.o MoperatorGeneralBloch_XdL.o SourceGeneration.o PML.o PMLGeneral.o Eps.o MathTools.o MatVecMaker.o Output.o DifferentialOps.o mympisetup.o ldos.o projsimpoverlap.o singleldos.o ldosonly.o filters.o alpha.o FOM.o thgfom_arbitraryPol.o ldosconstraint.o ldoskconstraint.o ldoskconstraintepsomega.o ldoskconstraintnofilter.o ldoskonly.o lens.o c4v.o EP.o eigsolver.o eigsolvertrans.o chiral.o chiral2.o ldoskmaxconstraint.o ldoskminconstraint.o sfg_arbitraryPol.o sfg_singleldos.o sfg_graphene.o c3v.o Qbooster.o
 
 MoperatorGeneral: MoperatorGeneral.o
 	$(CLINKER) -Wall -g -o $@ MoperatorGeneral.o  
@@ -17,6 +17,8 @@ SourceGeneration: SourceGeneration.o
 	$(CLINKER) -Wall -g -o $@ SourceGeneration.o  
 PML:PML.o
 	$(CLINKER) -Wall -g -o $@ PML.o  
+PMLGeneral:PMLGeneral.o
+	$(CLINKER) -Wall -g -o $@ PMLGeneral.o  
 Eps:Eps.o
 	$(CLINKER) -Wall -g -o $@ Eps.o   
 MathTools:MathTools.o
@@ -81,3 +83,5 @@ sfg_graphene:sfg_graphene.o
 	$(CLINKER) -Wall -g -o $@ sfg_graphene.o
 c3v:c3v.o
 	$(CLINKER) -Wall -g -o $@ c3v.o
+Qbooster:Qbooster.o
+	$(CLINKER) -Wall -g -o $@ Qbooster.o

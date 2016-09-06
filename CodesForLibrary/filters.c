@@ -211,6 +211,104 @@ PetscErrorCode GetH(MPI_Comm comm, Mat *Hout, int mx, int my, int mz, double s, 
 
 }
 
+PetscErrorCode GetHdummy(MPI_Comm comm, Mat *Hout, int DegFree, KSP *kspHout, PC *pcHout)
+{
+  PetscErrorCode ierr;
+  Mat H;
+  int i,ns,ne;
+  int N=DegFree;
+
+  MatCreate(comm, &H);
+  MatSetType(H,MATMPIAIJ);
+  MatSetSizes(H,PETSC_DECIDE, PETSC_DECIDE, N, N);
+  MatMPIAIJSetPreallocation(H, 1, PETSC_NULL, 1, PETSC_NULL);
+  MatAssemblyBegin(H, MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(H, MAT_FINAL_ASSEMBLY);
+  MatShift(H,1.0);
+
+  ierr = PetscObjectSetName((PetscObject) H,"Hop"); CHKERRQ(ierr);
+
+  KSP ksp;
+  PC pc; 
+  
+  ierr = KSPCreate(comm,&ksp);CHKERRQ(ierr);
+  ierr = KSPSetType(ksp, KSPGMRES);CHKERRQ(ierr);
+  ierr = KSPGetPC(ksp,&pc);CHKERRQ(ierr);
+  ierr = PCSetType(pc,PCLU);CHKERRQ(ierr);
+  ierr = PCFactorSetMatSolverPackage(pc,MATSOLVERMUMPS);CHKERRQ(ierr);
+  ierr = KSPSetTolerances(ksp,1e-14,PETSC_DEFAULT,PETSC_DEFAULT,maxit);CHKERRQ(ierr);
+
+  ierr = PCSetFromOptions(pc);
+  ierr = KSPSetFromOptions(ksp);CHKERRQ(ierr);
+
+  *Hout=H;
+  *kspHout=ksp;
+  *pcHout=pc;
+
+  PetscFunctionReturn(0);
+
+}
+
+PetscErrorCode GetH1d(MPI_Comm comm, Mat *Hout, int DegFree, double s, double nR, KSP *kspHout, PC *pcHout)
+{
+  PetscErrorCode ierr;
+  Mat H;
+  int i,ns,ne;
+  int N=DegFree;
+
+  MatCreate(comm, &H);
+  MatSetType(H,MATMPIAIJ);
+  MatSetSizes(H,PETSC_DECIDE, PETSC_DECIDE, N, N);
+  MatMPIAIJSetPreallocation(H, 3, PETSC_NULL, 3, PETSC_NULL);
+
+  double value[3];
+  int col[3];
+  
+  ierr = MatGetOwnershipRange(H, &ns, &ne); CHKERRQ(ierr);
+  
+  for (i = ns; i < ne; ++i) {
+    if (i==0){ 
+      col[0]= 0, value[0]= s*nR*nR*(-2.0)+1;
+      col[1]= 1, value[1]= s*nR*nR*2.0;
+      col[2]= 2, value[2]= 0;}
+    else if (i==N-1){ 
+      col[0]= N-3, value[0]= 0;
+      col[1]= N-2, value[1]= s*nR*nR*2.0;
+      col[2]= N-1, value[2]= s*nR*nR*(-2.0)+1;}
+    else{
+      col[0]= i-1, value[0]= s*nR*nR;
+      col[1]= i,   value[1]= s*nR*nR*(-2.0)+1;
+      col[2]= i+1, value[2]= s*nR*nR;}
+    
+    ierr = MatSetValues(H,1,&i,3,col,value,INSERT_VALUES); CHKERRQ(ierr);
+  }
+  
+  ierr = MatAssemblyBegin(H, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+  ierr = MatAssemblyEnd(H, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+
+  ierr = PetscObjectSetName((PetscObject) H,"Hop"); CHKERRQ(ierr);
+
+  KSP ksp;
+  PC pc; 
+  
+  ierr = KSPCreate(comm,&ksp);CHKERRQ(ierr);
+  ierr = KSPSetType(ksp, KSPGMRES);CHKERRQ(ierr);
+  ierr = KSPGetPC(ksp,&pc);CHKERRQ(ierr);
+  ierr = PCSetType(pc,PCLU);CHKERRQ(ierr);
+  ierr = PCFactorSetMatSolverPackage(pc,MATSOLVERMUMPS);CHKERRQ(ierr);
+  ierr = KSPSetTolerances(ksp,1e-14,PETSC_DEFAULT,PETSC_DEFAULT,maxit);CHKERRQ(ierr);
+
+  ierr = PCSetFromOptions(pc);
+  ierr = KSPSetFromOptions(ksp);CHKERRQ(ierr);
+
+  *Hout=H;
+  *kspHout=ksp;
+  *pcHout=pc;
+
+  PetscFunctionReturn(0);
+
+}
+
 PetscErrorCode SolveH(MPI_Comm comm, KSP ksp, Mat H, Vec rhs, Vec sol)
 {
   /*-----------------KSP Solving------------------*/   
