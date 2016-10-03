@@ -755,13 +755,9 @@ if (Job==1){
   for (i=0;i<DegFree;i++){ epsoptAll[i]=epsopt[i]; }
   epsoptAll[DegFreeAll-1]=tstart;
   
-  int optrho;
-  PetscOptionsGetInt(PETSC_NULL,"-optrho",&optrho,&flg);
-  if(!flg) optrho=0;
-  PetscPrintf(PETSC_COMM_WORLD,"optrho is %d \n", optrho);
-  PetscOptionsGetReal(PETSC_NULL,"-rho",&rho,&flg);
-  PetscPrintf(PETSC_COMM_WORLD,"material fraction rho is %0.16e \n", rho);
-  
+  double rho;
+  getreal("-rho",&rho,2.0);
+
   double mylb=0, myub=1.0, *lb=NULL, *ub=NULL;
   int maxeval, maxtime, mynloptalg;
   double maxf;
@@ -820,44 +816,64 @@ if (Job==1){
       nlopt_set_local_optimizer(opt,local_opt);
     }
 
-  if(optrho) nlopt_add_inequality_constraint(opt,materialfraction, NULL,1e-8);
+  if(rho<1.0) nlopt_add_inequality_constraint(opt,materialfraction,&rho,1e-8);
 
   int nummodes;
   PetscOptionsGetInt(PETSC_NULL,"-nummodes",&nummodes,&flg);  MyCheckAndOutputInt(flg,nummodes,"nummodes","number of degenerate modes to optimize");
 
-  double ld1, ld2, ld3, ld4, ld5, ld6;
-  ld1=ldosconstraint(DegFreeAll,epsoptAll,NULL,&ldos1data);
-  ld1=epsoptAll[DegFreeAll-1]-ld1;
-  ld2=ldosconstraint(DegFreeAll,epsoptAll,NULL,&ldos2data);
-  ld2=epsoptAll[DegFreeAll-1]-ld2;
-  ld3=ldosconstraint(DegFreeAll,epsoptAll,NULL,&ldos3data);
-  ld3=epsoptAll[DegFreeAll-1]-ld3;
-  ld4=ldosconstraint(DegFreeAll,epsoptAll,NULL,&ldos4data);
-  ld4=epsoptAll[DegFreeAll-1]-ld4;
-  ld5=ldosconstraint(DegFreeAll,epsoptAll,NULL,&ldos5data);
-  ld5=epsoptAll[DegFreeAll-1]-ld5;
-  ld6=ldosconstraint(DegFreeAll,epsoptAll,NULL,&ldos6data);
-  ld6=epsoptAll[DegFreeAll-1]-ld6;
-  Jmag1=sqrt(Jmag1/ld1);
-  Jmag2=sqrt(Jmag2/ld2);
-  Jmag3=sqrt(Jmag3/ld3);
-  Jmag4=sqrt(Jmag4/ld4);
-  Jmag5=sqrt(Jmag5/ld5);
-  Jmag6=sqrt(Jmag6/ld6);
+  int renormJ;
+  getint("-renormJ",&renormJ,1);
+  
+  if(renormJ){
+    double ld1, ld2, ld3, ld4, ld5, ld6;
+    ld1=ldosconstraint(DegFreeAll,epsoptAll,NULL,&ldos1data);
+    ld1=epsoptAll[DegFreeAll-1]-ld1;
+    ld2=ldosconstraint(DegFreeAll,epsoptAll,NULL,&ldos2data);
+    ld2=epsoptAll[DegFreeAll-1]-ld2;
+    ld3=ldosconstraint(DegFreeAll,epsoptAll,NULL,&ldos3data);
+    ld3=epsoptAll[DegFreeAll-1]-ld3;
+    ld4=ldosconstraint(DegFreeAll,epsoptAll,NULL,&ldos4data);
+    ld4=epsoptAll[DegFreeAll-1]-ld4;
+    ld5=ldosconstraint(DegFreeAll,epsoptAll,NULL,&ldos5data);
+    ld5=epsoptAll[DegFreeAll-1]-ld5;
+    ld6=ldosconstraint(DegFreeAll,epsoptAll,NULL,&ldos6data);
+    ld6=epsoptAll[DegFreeAll-1]-ld6;
+    Jmag1=sqrt(Jmag1/ld1);
+    Jmag2=sqrt(Jmag2/ld2);
+    Jmag3=sqrt(Jmag3/ld3);
+    Jmag4=sqrt(Jmag4/ld4);
+    Jmag5=sqrt(Jmag5/ld5);
+    Jmag6=sqrt(Jmag6/ld6);
+    
+    VecScale(ldos1data.b,Jmag1);
+    VecScale(ldos2data.b,Jmag2);
+    VecScale(ldos3data.b,Jmag3);
+    VecScale(ldos4data.b,Jmag4);
+    VecScale(ldos5data.b,Jmag5);
+    VecScale(ldos6data.b,Jmag6);
 
-  VecScale(ldos1data.b,Jmag1);
-  VecScale(ldos2data.b,Jmag2);
-  VecScale(ldos3data.b,Jmag3);
-  VecScale(ldos4data.b,Jmag4);
-  VecScale(ldos5data.b,Jmag5);
-  VecScale(ldos6data.b,Jmag6);
+    VecScale(ldos1data.weightedJ,Jmag1);
+    VecScale(ldos2data.weightedJ,Jmag2);
+    VecScale(ldos3data.weightedJ,Jmag3);
+    VecScale(ldos4data.weightedJ,Jmag4);
+    VecScale(ldos5data.weightedJ,Jmag5);
+    VecScale(ldos6data.weightedJ,Jmag6);
 
-  VecScale(ldos1data.weightedJ,Jmag1);
-  VecScale(ldos2data.weightedJ,Jmag2);
-  VecScale(ldos3data.weightedJ,Jmag3);
-  VecScale(ldos4data.weightedJ,Jmag4);
-  VecScale(ldos5data.weightedJ,Jmag5);
-  VecScale(ldos6data.weightedJ,Jmag6);
+    VecScale(J1,Jmag1);
+    VecScale(J2,Jmag2);
+    VecScale(J3,Jmag3);
+    VecScale(J4,Jmag4);
+    VecScale(J5,Jmag5);
+    VecScale(J6,Jmag6);
+    
+    OutputVec(PETSC_COMM_WORLD,J1,"J1input",".m");    
+    OutputVec(PETSC_COMM_WORLD,J2,"J2input",".m");
+    OutputVec(PETSC_COMM_WORLD,J3,"J3input",".m");    
+    OutputVec(PETSC_COMM_WORLD,J4,"J4input",".m");
+    OutputVec(PETSC_COMM_WORLD,J5,"J5input",".m");    
+    OutputVec(PETSC_COMM_WORLD,J6,"J6input",".m");
+
+  }
 
   if(nummodes==1){
     nlopt_add_inequality_constraint(opt,ldosconstraint,&ldos1data,1e-8);
@@ -1059,7 +1075,7 @@ double pfunc(int DegFree, double *epsopt, double *grad, void *data)
     sumeps+=fabs(epsopt[i]*(1-epsopt[i]));
     grad[i]=1-2*epsopt[i];
   }
-  //grad[DegFree-1]=0;
+  grad[DegFree-1]=0;
 
   PetscPrintf(PETSC_COMM_WORLD,"******the current binaryindex is %1.6e \n",sumeps);
   PetscPrintf(PETSC_COMM_WORLD,"******the current binaryexcess  is %1.6e \n",sumeps-frac*max);
@@ -1067,24 +1083,26 @@ double pfunc(int DegFree, double *epsopt, double *grad, void *data)
   return sumeps - frac*max;
 }
 
-double materialfraction(int DegFree,double *epsopt, double *grad, void *data)
+double materialfraction(int DegFree, double *epsopt, double *grad, void *data)
 {
   int i;
   double sumeps;
-  double sumepsmax=DegFree-1;
+  double max=DegFree-1;
+  double *tmp  = (double *) data;
+  double frac= *tmp;
 
   sumeps=0.0;
   for (i=0;i<DegFree-1;i++){
     sumeps+=epsopt[i];
-    grad[i]=1.0/sumepsmax;
+    grad[i]=1;
   }
   grad[DegFree-1]=0;
 
-  PetscPrintf(PETSC_COMM_WORLD,"******the current material fraction is %1.6e \n",sumeps/sumepsmax);
+  PetscPrintf(PETSC_COMM_WORLD,"******the current fillingfraction is %1.6e \n",sumeps/max);
 
-  return sumeps/sumepsmax - rho;
+  return sumeps - frac*max;
 }
- 
+
 PetscErrorCode setupKSP(MPI_Comm comm, KSP *kspout, PC *pcout, int solver, int iteronly)
 {
   PetscErrorCode ierr;

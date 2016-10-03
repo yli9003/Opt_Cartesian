@@ -3,6 +3,54 @@
 #define PI 3.14159265358979e+00
 
 typedef struct{
+  int Mx;
+  int My;
+  int Mz;
+  int Lz;
+  int Mzslab;
+  int Nx;
+  int Ny;
+  int Nz;
+  int Npmlx;
+  int Npmly;
+  int Npmlz;
+  int Nxyz;
+  int DegFree;
+  double hx;
+  double hy;
+  double hz;
+  double hxyz;
+  double sigmax;
+  double sigmay;
+  double sigmaz;
+  int BCPeriod;
+  int LowerPMLx;
+  int LowerPMLy;
+  int LowerPMLz;
+  int Nxo;
+  int Nyo;
+  int Nzo;
+  double Qabs;
+  char initialdatafile[PETSC_MAX_PATH_LEN];
+  char filenameComm[PETSC_MAX_PATH_LEN];
+  int outputbase;
+  int readlubsfromfile;
+} Universals;
+
+typedef struct{
+  Mat M;
+  Vec epsdiff;
+  Vec epsbkg;
+  Vec epspmlQ;
+  Vec epscoef;
+  Vec J;
+  Vec weightedJ;
+  Vec b;
+  Vec x;
+  double omega;
+} Maxwell;
+
+typedef struct{
   double omega;
   Mat M;
   Mat A;
@@ -231,6 +279,42 @@ typedef struct{
   int outputbase;
 } THGdataGroup;
 
+typedef struct{
+  int Nx;
+  int Ny;
+  int Nz;
+  double hxyz;
+  Vec epsSReal;
+  Vec epsFReal;
+  double omega;
+  Mat M;
+  Mat A;
+  Vec b;
+  Vec J;
+  Vec x;
+  Vec weightedJ;
+  Vec epspmlQ;
+  Vec epsmedium;
+  Vec epsDiff;
+  Vec epscoef;
+  KSP ksp;
+  int *its;
+  double metaphase;
+  int trigoption;
+  Vec refField;
+  Vec refFieldconj;
+  Vec VecPt;
+  int outputbase;
+  char filenameComm[PETSC_MAX_PATH_LEN];
+} MetaSurfGroup;
+
+// from initialize.c
+PetscErrorCode readfromflags(Universals *params);
+
+PetscErrorCode setupMatVecs(Universals params, Mat *A, Mat *C, Mat *D, Vec *vR, Vec *vI, Vec *weight, Vec *epsSReal, Vec *epsFReal);
+
+PetscErrorCode makemaxwell(char file[PETSC_MAX_PATH_LEN], Universals params, Mat A, Mat D, Vec vR, Vec weight, Maxwell *fdfd);
+
 // from MoperatorGeneral.c
 PetscErrorCode MoperatorGeneral(MPI_Comm comm, Mat *Mout, int Nx, int Ny, int Nz, double hx, double hy, double hz, int bx[2], int by[2], int bz[2], double *muinv,int DimPeriod);
 
@@ -415,6 +499,9 @@ double EPLDOS(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
 // from eigsolver.c
 int eigsolver(Mat M, Vec epsC, Mat D);
 
+// from eigsolver2.c
+int eigsolver2(Mat M, Vec epsC, Mat D, int printeigenvec);
+
 // from eigsolvertrans.c
 int eigsolvertrans(Mat M, Vec epsC, Mat D, Mat C);
 
@@ -434,6 +521,11 @@ double ldoskchiralconstraint(int DegFreeAll,double *epsoptAll, double *gradAll, 
 double ldoskminconstraint(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
 
 double ldoskmaxconstraint(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
+
+// from metasurface.c
+double metasurface(int DegFree,double *epsopt, double *grad, void *data);
+
+PetscErrorCode MakeVecPt(Vec VecPt, int Nx, int Ny, int Nz, int ix, int iy, int iz, int ic);
 
 // from sfg_arbitraryPol.c
 double sfg_arbitraryPol(int DegFree,double *epsopt, double *grad, void *data);
