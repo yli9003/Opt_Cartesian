@@ -525,6 +525,10 @@ double ldoskmaxconstraint(int DegFreeAll,double *epsoptAll, double *gradAll, voi
 // from metasurface.c
 double metasurface(int DegFree,double *epsopt, double *grad, void *data);
 
+double metasurfaceminimax(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
+
+double minimaxobjfun(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
+
 PetscErrorCode MakeVecPt(Vec VecPt, int Nx, int Ny, int Nz, int ix, int iy, int iz, int ic);
 
 // from sfg_arbitraryPol.c

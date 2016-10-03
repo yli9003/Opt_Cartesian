@@ -61,7 +61,9 @@ PetscErrorCode readfromflags(Universals *params)
   getint("-outputbase",&outputbase,50);
   getint("-readlubsfromfile",&readlubsfromfile,0);
 
-  Universals tmp={Mx,My,Mz,Lz,Mzslab,Nx,Ny,Nz,Npmlx,Npmly,Npmlz,Nxyz,DegFree,hx,hy,hz,hxyz,sigmax,sigmay,sigmaz,BCPeriod,LowerPMLx,LowerPMLy,LowerPMLz,Nxo,Nyo,Nzo,Qabs,NULL,NULL,outputbase,readlubsfromfile};
+  Universals tmp={Mx,My,Mz,Lz,Mzslab,Nx,Ny,Nz,Npmlx,Npmly,Npmlz,Nxyz,DegFree,hx,hy,hz,hxyz,sigmax,sigmay,sigmaz,BCPeriod,LowerPMLx,LowerPMLy,LowerPMLz,Nxo,Nyo,Nzo,Qabs,NULL,NULL,0,0};
+  tmp.outputbase=outputbase;
+  tmp.readlubsfromfile=readlubsfromfile;
   strcpy(tmp.initialdatafile,initialdatafile);
   strcpy(tmp.filenameComm,filenameComm);
 
