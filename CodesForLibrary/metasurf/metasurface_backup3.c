@@ -154,16 +154,13 @@ double metasurface(int DegFree,double *epsopt, double *grad, void *data)
     VecPointwiseMult(tmp,tmp,vR);
     VecScale(tmp,1/xamp);
 
-    CmpVecScale(tmp,Grad2,quadr,quadi);
-    VecScale(Grad2,-1/(xamp*xamp));
-
-    VecSet(tmp,0.0);
-    VecAXPY(tmp,1.0,Grad1);
-    VecAXPY(tmp,1.0,Grad2);
+    //VecSet(tmp,0.0);
+    //VecAXPY(tmp,1.0,Grad1);
+    //VecAXPY(tmp,1.0,Grad2);
     
-    if(trigoption==1) VecPointwiseMult(tmp,tmp,vR);
-    if(trigoption==2) VecPointwiseMult(tmp,tmp,vI);
-    VecScale(tmp,2*quaddiff);
+    //if(trigoption==1) VecPointwiseMult(tmp,tmp,vR);
+    //if(trigoption==2) VecPointwiseMult(tmp,tmp,vI);
+    //VecScale(tmp,2*quaddiff);
     MatMultTranspose(A,tmp,vgrad);
     
     //correction from filters
@@ -196,7 +193,8 @@ double metasurface(int DegFree,double *epsopt, double *grad, void *data)
   VecDestroy(&vgrad);
   VecDestroy(&epsgrad);
 
-  return quaddiffsq;
+  //return quaddiffsq;
+  return xamp;
 }
 
 PetscErrorCode MakeVecPt(Vec VecPt, int Nx, int Ny, int Nz, int ix, int iy, int iz, int ic)

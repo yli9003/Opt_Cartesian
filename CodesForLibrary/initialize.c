@@ -207,21 +207,19 @@ PetscErrorCode makemaxwell(char file[PETSC_MAX_PATH_LEN], Universals params, Mat
   VecDuplicate(vR,&b);
   VecDuplicate(vR,&x);
 
-  /*
   double *Jdist;
   FILE *Jptf;
   int i;
-  Jdist = (double *) malloc(6*params.Nxyz*sizeof(double));
-  Jptf = fopen(Jfile,"r");
+  Jdist = (double *) malloc(6*params.Nxyz*sizeof(double)); 
+  Jptf = fopen("Jinput.txt","r");
   for (i=0;i<6*params.Nxyz;i++)
-    {
+    { 
       err=fscanf(Jptf,"%lf",&Jdist[i]);
-    }
-  fclose(Jptf);
-  ArrayToVec(Jdist,J);
-  free(Jdist);*/
+    } 
+  fclose(Jptf); 
+  ArrayToVec(Jdist,J); 
+  free(Jdist);
 
-  VecSet(J,1.0);
   VecPointwiseMult(weightedJ,weight,J);
   MatMult(D,J,b);
   VecScale(b,omega);

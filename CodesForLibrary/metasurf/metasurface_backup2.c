@@ -89,18 +89,17 @@ double metasurface(int DegFree,double *epsopt, double *grad, void *data)
   // solve the two fundamental modes and their ldos
   SolveMatrix(PETSC_COMM_WORLD,ksp,Mtmp,b,x,its);
 
+  double xamp;
+ 
   CmpVecProd(x,refFieldconj,uvstar);
   VecPointwiseMult(uvstar,uvstar,VecPt);
   VecPointwiseMult(uvstarR,uvstar,vR);
   VecPointwiseMult(uvstarI,uvstar,vI);
-
-  double xamp;
   MatMult(C,x,xconj);
   CmpVecProd(x,xconj,xmag);
-  VecPointwiseMult(xmag,xmag,vR);
+  VecSqrtAbs(xmag);
   VecPointwiseMult(xmag,xmag,VecPt);
   VecSum(xmag,&xamp);
-  xamp=sqrt(xamp);
   if(fabs(xamp)<1e-3) PetscPrintf(PETSC_COMM_WORLD,"***WARNING zero amp at ref point.\n");
   
   double quadr, quadi, quadrature, refquad, quaddiff, quaddiffsq;
@@ -141,19 +140,20 @@ double metasurface(int DegFree,double *epsopt, double *grad, void *data)
     VecPointwiseMult(Uone,refField,VecPt);
     VecScale(Uone,1/xamp);
     KSPSolveTranspose(ksp,Uone,u1);
+
+    VecPointwiseMult(Utwo,x,VecPt);
+    VecScale(Utwo,1/(2*xamp));
+    KSPSolveTranspose(ksp,Utwo,u2);
+
     MatMult(C,u1,Grad1);
     CmpVecProd(Grad1,epscoef,tmp);
     CmpVecProd(tmp,x,Grad1);
-
-
-    VecPointwiseMult(Utwo,x,VecPt);
-    KSPSolveTranspose(ksp,Utwo,u2);
-    MatMult(C,u2,tmp); 
-    CmpVecProd(tmp,x,Grad2);
-    CmpVecProd(Grad2,epscoef,tmp); 
+    
+    CmpVecProd(epscoef,x,tmp);
+    MatMult(C,tmp,Grad2);
+    CmpVecProd(Grad2,u2,tmp);
     VecPointwiseMult(tmp,tmp,vR);
-    VecScale(tmp,1/xamp);
-
+    VecScale(tmp,2.0);
     CmpVecScale(tmp,Grad2,quadr,quadi);
     VecScale(Grad2,-1/(xamp*xamp));
 

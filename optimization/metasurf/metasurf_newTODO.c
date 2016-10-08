@@ -118,6 +118,23 @@ int main(int argc, char **argv)
   MetaSurfGroup meta1a={flagparams.Nx,flagparams.Ny,flagparams.Nz,flagparams.hxyz,epsSReal,epsFReal, maxwell1.omega, maxwell1.M, A, maxwell1.b, maxwell1.J, maxwell1.x, maxwell1.weightedJ, maxwell1.epspmlQ, maxwell1.epsbkg, maxwell1.epsdiff, maxwell1.epscoef, ksp1, &its1, metaphase, 1, refField1, refField1conj, VecPt, flagparams.outputbase, flagparams.filenameComm};
   MetaSurfGroup meta1b={flagparams.Nx,flagparams.Ny,flagparams.Nz,flagparams.hxyz,epsSReal,epsFReal, maxwell1.omega, maxwell1.M, A, maxwell1.b, maxwell1.J, maxwell1.x, maxwell1.weightedJ, maxwell1.epspmlQ, maxwell1.epsbkg, maxwell1.epsdiff, maxwell1.epscoef, ksp1, &its1, metaphase, 2, refField1, refField1conj, VecPt, flagparams.outputbase, flagparams.filenameComm};
 
+  /****TEST******/
+  int printinitialvecs;
+  getint("-printinitialvecs",&printinitialvecs,0);
+  if(printinitialvecs){
+    Vec tmp;
+    VecDuplicate(vR,&tmp);
+    VecSet(tmp,0.0);
+    VecAXPY(tmp,1.0,maxwell1.epsdiff);
+    VecAXPY(tmp,1.0,maxwell1.epsbkg);
+    OutputVec(PETSC_COMM_WORLD,tmp,"epslayers",".m");
+    VecDestroy(&tmp);
+    OutputVec(PETSC_COMM_WORLD,maxwell1.J,"J",".m");
+    OutputVec(PETSC_COMM_WORLD,VecPt,"VecPt",".m");
+    OutputVec(PETSC_COMM_WORLD,refField1,"refField",".m");
+    double tmptest=metasurface(flagparams.DegFree,epsopt,grad,&meta1a);
+    OutputVec(PETSC_COMM_WORLD,meta1a.x,"exmField",".m");
+  }
   /***********************/
   int Job;
   getint("-Job",&Job,1);
@@ -222,7 +239,7 @@ int main(int argc, char **argv)
       }
 
     nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta1a,1e-8);
-    nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta1b,1e-8);
+    //nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta1b,1e-8);
 
     if(frac<1.0) nlopt_add_inequality_constraint(opt,pfunc,&frac,1e-8);
     nlopt_set_min_objective(opt,minimaxobjfun,NULL);   
@@ -266,6 +283,7 @@ PetscErrorCode makeRefField(Maxwell maxwell, Universals params, Mat A, Mat C, Ma
   SolveMatrix(PETSC_COMM_WORLD,ksp,Mtmp,maxwell.b,x,its);
   MatMult(C,x,xconj);
   CmpVecProd(x,xconj,mag);
+  VecPointwiseMult(mag,mag,vR);
   VecSqrtAbs(mag);
   VecPointwiseMult(mag,mag,VecPt);
   VecSum(mag,&amp);
@@ -296,10 +314,11 @@ double pfunc(int DegFree, double *epsopt, double *grad, void *data)
   double frac= *tmp;
 
   sumeps=0.0;
-  for (i=0;i<DegFree;i++){
+  for (i=0;i<DegFree-1;i++){
     sumeps+=fabs(epsopt[i]*(1-epsopt[i]));
     grad[i]=1-2*epsopt[i];
   }
+  grad[DegFree-1]=0;
 
   PetscPrintf(PETSC_COMM_WORLD,"******the current binaryindex is %1.6e \n",sumeps);
   PetscPrintf(PETSC_COMM_WORLD,"******the current binaryexcess  is %1.6e \n",sumeps-frac*max);
