@@ -157,7 +157,7 @@ int main(int argc, char **argv)
     for (epscen=s1;epscen<s2;epscen+=ds)
       { 
 	epsopt[posMj]=epscen; 
-	beta = metasurface(flagparams.DegFree,epsopt,grad,&meta1a);
+	beta = metasurface(flagparams.DegFree,epsopt,grad,&meta1b);
 	PetscPrintf(PETSC_COMM_WORLD,"epscen: %g objfunc: %g objfunc-grad: %g \n", epsopt[posMj], beta, grad[posMj]);
       }
 
@@ -239,7 +239,7 @@ int main(int argc, char **argv)
       }
 
     nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta1a,1e-8);
-    //nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta1b,1e-8);
+    nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta1b,1e-8);
 
     if(frac<1.0) nlopt_add_inequality_constraint(opt,pfunc,&frac,1e-8);
     nlopt_set_min_objective(opt,minimaxobjfun,NULL);   
@@ -252,6 +252,82 @@ int main(int argc, char **argv)
 
   }
 
+
+  if(Job==2){
+
+    int DegFree=flagparams.DegFree;
+
+    /*---------Optimization--------*/
+    double frac;
+    getreal("-penalfrac",&frac,1.0);
+
+    double mylb=0, myub=1.0, *lb=NULL, *ub=NULL;
+    int maxeval, maxtime, mynloptalg;
+    double maxf;
+    nlopt_opt  opt;
+    int mynloptlocalalg;
+    nlopt_opt local_opt;
+    nlopt_result result;
+
+    PetscOptionsGetInt(PETSC_NULL,"-maxeval",&maxeval,&flg);  MyCheckAndOutputInt(flg,maxeval,"maxeval","max number of evaluation");
+    PetscOptionsGetInt(PETSC_NULL,"-maxtime",&maxtime,&flg);  MyCheckAndOutputInt(flg,maxtime,"maxtime","max time of evaluation");
+    PetscOptionsGetInt(PETSC_NULL,"-mynloptalg",&mynloptalg,&flg);  MyCheckAndOutputInt(flg,mynloptalg,"mynloptalg","The algorithm used ");
+    PetscOptionsGetInt(PETSC_NULL,"-mynloptlocalalg",&mynloptlocalalg,&flg);  MyCheckAndOutputInt(flg,mynloptlocalalg,"mynloptlocalalg","The local optimization algorithm used ");
+
+    lb = (double *) malloc(DegFree*sizeof(double));
+    ub = (double *) malloc(DegFree*sizeof(double));
+    int readlubsfromfile=flagparams.readlubsfromfile;
+    if(!readlubsfromfile) {
+      for(i=0;i<DegFree;i++)
+	{
+	  lb[i] = mylb;
+	  ub[i] = myub;
+	}
+    }else {
+      char lbfile[PETSC_MAX_PATH_LEN], ubfile[PETSC_MAX_PATH_LEN];
+      PetscOptionsGetString(PETSC_NULL,"-lbfile",lbfile,PETSC_MAX_PATH_LEN,&flg); MyCheckAndOutputChar(flg,lbfile,"lbfile","Lower-bound file");
+      PetscOptionsGetString(PETSC_NULL,"-ubfile",ubfile,PETSC_MAX_PATH_LEN,&flg); MyCheckAndOutputChar(flg,ubfile,"ubfile","Upper-bound file");
+      ptf = fopen(lbfile,"r");
+      for (i=0;i<DegFree;i++)
+	{ 
+	  fscanf(ptf,"%lf",&lb[i]);
+	}
+      fclose(ptf);
+
+      ptf = fopen(ubfile,"r");
+      for (i=0;i<DegFree;i++)
+	{ 
+	  fscanf(ptf,"%lf",&ub[i]);
+	}
+      fclose(ptf);
+
+    }
+
+    opt = nlopt_create(mynloptalg, DegFree);
+    nlopt_set_lower_bounds(opt,lb);
+    nlopt_set_upper_bounds(opt,ub);
+    nlopt_set_maxeval(opt,maxeval);
+    nlopt_set_maxtime(opt,maxtime);
+    if (mynloptalg==11) nlopt_set_vector_storage(opt,4000);
+    if (mynloptlocalalg)
+      { 
+	PetscPrintf(PETSC_COMM_WORLD,"-----------Running with a local optimizer.---------\n"); 
+	local_opt=nlopt_create(mynloptlocalalg,DegFree);
+	nlopt_set_ftol_rel(local_opt, 1e-14);
+	nlopt_set_maxeval(local_opt,100000);
+	nlopt_set_local_optimizer(opt,local_opt);
+      }
+
+    if(frac<1.0) nlopt_add_inequality_constraint(opt,pfunc,&frac,1e-8);
+    nlopt_set_max_objective(opt,metasurface,&meta1a);   
+
+    result = nlopt_optimize(opt,epsopt,&maxf);
+
+    PetscPrintf(PETSC_COMM_WORLD,"nlopt failed! \n", result);
+
+    PetscPrintf(PETSC_COMM_WORLD,"nlopt returned value is %d \n", result);
+
+  }
 
   int rank;
   MPI_Comm_rank(PETSC_COMM_WORLD, &rank);

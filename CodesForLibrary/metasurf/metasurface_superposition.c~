@@ -106,7 +106,6 @@ double metasurface(int DegFree,double *epsopt, double *grad, void *data)
   double quadr, quadi, quadrature, refquad, quaddiff, quaddiffsq;
   VecSum(uvstarR,&quadr);
   VecSum(uvstarI,&quadi);
-  xamp=1.0;
   quadrature=((trigoption==1)*quadr + (trigoption==2)*quadi)/xamp;
   refquad=(trigoption==1)*cos(metaphase)+(trigoption==2)*sin(metaphase);
   quaddiff=quadrature-refquad;
@@ -160,7 +159,7 @@ double metasurface(int DegFree,double *epsopt, double *grad, void *data)
 
     VecSet(tmp,0.0);
     VecAXPY(tmp,1.0,Grad1);
-    //VecAXPY(tmp,1.0,Grad2);
+    VecAXPY(tmp,1.0,Grad2);
     
     if(trigoption==1) VecPointwiseMult(tmp,tmp,vR);
     if(trigoption==2) VecPointwiseMult(tmp,tmp,vI);

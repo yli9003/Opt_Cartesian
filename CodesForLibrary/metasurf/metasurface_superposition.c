@@ -30,16 +30,13 @@ double metasurface(int DegFree,double *epsopt, double *grad, void *data)
   int Nx = ptdata->Nx;
   int Ny = ptdata->Ny;
   int Nz = ptdata->Nz;
-  //double hxyz = ptdata->hxyz;
   Vec epsSReal = ptdata->epsSReal;
   Vec epsFReal = ptdata->epsFReal;
   double omega = ptdata->omega;
   Mat M = ptdata->M;
   Mat A = ptdata->A;
   Vec b = ptdata->b;
-  //Vec J = ptdata->J;
   Vec x = ptdata->x;
-  //Vec weightedJ = ptdata->weightedJ;
   Vec epspmlQ  = ptdata->epspmlQ;
   Vec epsmedium = ptdata->epsmedium;
   Vec epsDiff = ptdata->epsDiff;
@@ -47,7 +44,6 @@ double metasurface(int DegFree,double *epsopt, double *grad, void *data)
   KSP ksp = ptdata->ksp;
   int *its = ptdata->its; 
   double metaphase = ptdata->metaphase;
-  int trigoption = ptdata->trigoption;
   Vec refField = ptdata->refField;
   Vec refFieldconj = ptdata->refFieldconj;
   Vec VecPt = ptdata->VecPt;
@@ -94,25 +90,18 @@ double metasurface(int DegFree,double *epsopt, double *grad, void *data)
   VecPointwiseMult(uvstarR,uvstar,vR);
   VecPointwiseMult(uvstarI,uvstar,vI);
 
-  double xamp;
-  MatMult(C,x,xconj);
-  CmpVecProd(x,xconj,xmag);
-  VecPointwiseMult(xmag,xmag,vR);
-  VecPointwiseMult(xmag,xmag,VecPt);
-  VecSum(xmag,&xamp);
-  xamp=sqrt(xamp);
-  if(fabs(xamp)<1e-3) PetscPrintf(PETSC_COMM_WORLD,"***WARNING zero amp at ref point.\n");
-  
-  double quadr, quadi, quadrature, refquad, quaddiff, quaddiffsq;
-  VecSum(uvstarR,&quadr);
-  VecSum(uvstarI,&quadi);
-  xamp=1.0;
-  quadrature=((trigoption==1)*quadr + (trigoption==2)*quadi)/xamp;
-  refquad=(trigoption==1)*cos(metaphase)+(trigoption==2)*sin(metaphase);
-  quaddiff=quadrature-refquad;
-  quaddiffsq=quaddiff*quaddiff;
+  double fieldr, fieldi;
+  VecSum(uvstarR,&fieldr);
+  VecSum(uvstarI,&fieldi);
+  double complex fieldval=fieldr+I*fieldi;
+  double complex metafield=cos(metaphase)+I*sin(metaphase);
+  double complex superpose=fieldval+metafield;
+  double fieldmag=creal(fieldval*conj(fieldval));
+  double superposemag=creal(superpose*conj(superpose));
+  double superposephase=superposemag - fieldmag - 1;
+  double superposephasenormalized= superposephase/sqrt(fieldmag);
 
-  PetscPrintf(PETSC_COMM_WORLD,"---*****step, quadrature choice, value: %d, %d, %.8e, %.8e, %.8e\n", count,trigoption,quadrature,quaddiff,quaddiffsq);
+    PetscPrintf(PETSC_COMM_WORLD,"---*****step, superposemag, superposephase, superposephasenormalized: %d, %.8e, %.8e, %.8e\n", count,superposemag,superposephase,superposephasenormalized);
 
 
   /*-------------- Now store the epsilon at each step--------------*/
@@ -139,32 +128,34 @@ double metasurface(int DegFree,double *epsopt, double *grad, void *data)
 
   /*-------take care of the gradient---------*/
   if (grad) {
-    VecPointwiseMult(Uone,refField,VecPt);
-    VecScale(Uone,1/xamp);
+    VecCopy(uvstar,tmp);
+    VecAXPY(tmp,cos(metaphase),vR);
+    VecAXPY(tmp,sin(metaphase),vI);
+    VecPointwiseMult(tmp,tmp,VecPt);
+    CmpVecProd(tmp,refField,Uone);
     KSPSolveTranspose(ksp,Uone,u1);
     MatMult(C,u1,Grad1);
     CmpVecProd(Grad1,epscoef,tmp);
     CmpVecProd(tmp,x,Grad1);
+    VecPointwiseMult(Grad1,Grad1,vR);
+    VecScale(Grad1,2.0);
 
-
-    VecPointwiseMult(Utwo,x,VecPt);
+    CmpVecProd(uvstar,refField,Utwo);
+    VecPointwiseMult(Utwo,Utwo,VecPt);
     KSPSolveTranspose(ksp,Utwo,u2);
-    MatMult(C,u2,tmp); 
+    MatMult(C,u2,Grad2);
+    CmpVecProd(Grad2,epscoef,tmp);
     CmpVecProd(tmp,x,Grad2);
-    CmpVecProd(Grad2,epscoef,tmp); 
-    VecPointwiseMult(tmp,tmp,vR);
-    VecScale(tmp,1/xamp);
-
-    CmpVecScale(tmp,Grad2,quadr,quadi);
-    VecScale(Grad2,-1/(xamp*xamp));
+    VecPointwiseMult(Grad2,Grad2,vR);
+    VecScale(Grad2,2.0);
 
     VecSet(tmp,0.0);
     VecAXPY(tmp,1.0,Grad1);
-    //VecAXPY(tmp,1.0,Grad2);
-    
-    if(trigoption==1) VecPointwiseMult(tmp,tmp,vR);
-    if(trigoption==2) VecPointwiseMult(tmp,tmp,vI);
-    VecScale(tmp,2*quaddiff);
+    VecAXPY(tmp,-1.0,Grad2);
+    VecScale(tmp,1.0/sqrt(fieldmag));
+    VecAXPY(tmp,-superposephase/(2*sqrt(fieldmag*fieldmag*fieldmag)),Grad2);
+    //VecAXPY(tmp,-1.0/(2*sqrt(fieldmag*fieldmag*fieldmag)),Grad2);
+
     MatMultTranspose(A,tmp,vgrad);
     
     //correction from filters
@@ -197,7 +188,7 @@ double metasurface(int DegFree,double *epsopt, double *grad, void *data)
   VecDestroy(&vgrad);
   VecDestroy(&epsgrad);
 
-  return quaddiffsq;
+  return superposephasenormalized;
 }
 
 PetscErrorCode MakeVecPt(Vec VecPt, int Nx, int Ny, int Nz, int ix, int iy, int iz, int ic)
