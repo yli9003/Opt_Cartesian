@@ -115,25 +115,26 @@ int main(int argc, char **argv)
   makemaxwell(maxwellfile1,flagparams,A,D,vR,weight,&maxwell1);
   setupKSP(PETSC_COMM_WORLD,&ksp1,&pc1,solver,0);
   makeRefField(maxwell1,flagparams,A,C,D,vR,ksp1,&its1, &refField1, &refField1conj, VecPt);
-  MetaSurfGroup meta1a={flagparams.Nx,flagparams.Ny,flagparams.Nz,flagparams.hxyz,epsSReal,epsFReal, maxwell1.omega, maxwell1.M, A, maxwell1.b, maxwell1.J, maxwell1.x, maxwell1.weightedJ, maxwell1.epspmlQ, maxwell1.epsbkg, maxwell1.epsdiff, maxwell1.epscoef, ksp1, &its1, metaphase, 1, refField1, refField1conj, VecPt, flagparams.outputbase, flagparams.filenameComm};
-  MetaSurfGroup meta1b={flagparams.Nx,flagparams.Ny,flagparams.Nz,flagparams.hxyz,epsSReal,epsFReal, maxwell1.omega, maxwell1.M, A, maxwell1.b, maxwell1.J, maxwell1.x, maxwell1.weightedJ, maxwell1.epspmlQ, maxwell1.epsbkg, maxwell1.epsdiff, maxwell1.epscoef, ksp1, &its1, metaphase, 2, refField1, refField1conj, VecPt, flagparams.outputbase, flagparams.filenameComm};
+  MetaSurfGroup meta1={flagparams.Nx,flagparams.Ny,flagparams.Nz,flagparams.hxyz,epsSReal,epsFReal, maxwell1.omega, maxwell1.M, A, maxwell1.b, maxwell1.J, maxwell1.x, maxwell1.weightedJ, maxwell1.epspmlQ, maxwell1.epsbkg, maxwell1.epsdiff, maxwell1.epscoef, ksp1, &its1, metaphase, 1, refField1, refField1conj, VecPt, flagparams.outputbase, flagparams.filenameComm};
 
   /****TEST******/
   int printinitialvecs;
   getint("-printinitialvecs",&printinitialvecs,0);
   if(printinitialvecs){
-    Vec tmp;
-    VecDuplicate(vR,&tmp);
-    VecSet(tmp,0.0);
-    VecAXPY(tmp,1.0,maxwell1.epsdiff);
-    VecAXPY(tmp,1.0,maxwell1.epsbkg);
-    OutputVec(PETSC_COMM_WORLD,tmp,"epslayers",".m");
-    VecDestroy(&tmp);
+    Vec tmpepsS, tmpepsF;
+    MatCreateVecs(A,&tmpepsS,&tmpepsF);
+    ArrayToVec(epsopt,tmpepsS);
+    MatMult(A,tmpepsS,tmpepsF);
+    VecPointwiseMult(tmpepsF,tmpepsF,maxwell1.epsdiff);
+    VecAXPY(tmpepsF,1.0,maxwell1.epsbkg);
+    OutputVec(PETSC_COMM_WORLD,tmpepsF,"epsinitial",".m");
+    VecDestroy(&tmpepsS);
+    VecDestroy(&tmpepsF);
     OutputVec(PETSC_COMM_WORLD,maxwell1.J,"J",".m");
     OutputVec(PETSC_COMM_WORLD,VecPt,"VecPt",".m");
     OutputVec(PETSC_COMM_WORLD,refField1,"refField",".m");
-    double tmptest=metasurface(flagparams.DegFree,epsopt,grad,&meta1a);
-    OutputVec(PETSC_COMM_WORLD,meta1a.x,"exmField",".m");
+    double tmptest=metasurface(flagparams.DegFree,epsopt,grad,&meta1);
+    OutputVec(PETSC_COMM_WORLD,meta1.x,"exmField",".m");
   }
   /***********************/
   int Job;
@@ -157,7 +158,7 @@ int main(int argc, char **argv)
     for (epscen=s1;epscen<s2;epscen+=ds)
       { 
 	epsopt[posMj]=epscen; 
-	beta = metasurface(flagparams.DegFree,epsopt,grad,&meta1b);
+	beta = metasurface(flagparams.DegFree,epsopt,grad,&meta1);
 	PetscPrintf(PETSC_COMM_WORLD,"epscen: %g objfunc: %g objfunc-grad: %g \n", epsopt[posMj], beta, grad[posMj]);
       }
 
@@ -238,11 +239,10 @@ int main(int argc, char **argv)
 	nlopt_set_local_optimizer(opt,local_opt);
       }
 
-    nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta1a,1e-8);
-    nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta1b,1e-8);
+    nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta1,1e-8);
 
     if(frac<1.0) nlopt_add_inequality_constraint(opt,pfunc,&frac,1e-8);
-    nlopt_set_min_objective(opt,minimaxobjfun,NULL);   
+    nlopt_set_max_objective(opt,minimaxobjfun,NULL);   
 
     result = nlopt_optimize(opt,epsoptAll,&maxf);
 
@@ -319,7 +319,7 @@ int main(int argc, char **argv)
       }
 
     if(frac<1.0) nlopt_add_inequality_constraint(opt,pfunc,&frac,1e-8);
-    nlopt_set_max_objective(opt,metasurface,&meta1a);   
+    nlopt_set_max_objective(opt,metasurface,&meta1);   
 
     result = nlopt_optimize(opt,epsopt,&maxf);
 

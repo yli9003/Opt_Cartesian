@@ -221,11 +221,11 @@ double metasurfaceminimax(int DegFreeAll,double *epsoptAll, double *gradAll, voi
   double obj=metasurface(DegFree,epsopt,grad,data);
   count=count-1;
   for(i=0;i<DegFree;i++){
-    gradAll[i]=grad[i];
+    gradAll[i]=-1.0*grad[i];
   }
-  gradAll[DegFreeAll-1]=-1.0;
+  gradAll[DegFreeAll-1]=1.0;
 
-  return obj-epsoptAll[DegFreeAll-1];
+  return epsoptAll[DegFreeAll-1] - obj;
   
 }
 
