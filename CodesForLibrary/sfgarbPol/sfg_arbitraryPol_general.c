@@ -276,6 +276,7 @@ double sfg_arbitraryPol(int DegFree,double *epsopt, double *grad, void *data)
     CmpVecProd(tmp,x1,tmp1);
     CmpVecProd(tmp1,epscoef1,tmp);
     VecScale(tmp,-hxyz);
+    VecPointwiseMult(tmp,tmp,vR);
     MatMultTranspose(A,tmp,ldos1grad);
 
     //ldos2grad calculation
@@ -284,6 +285,7 @@ double sfg_arbitraryPol(int DegFree,double *epsopt, double *grad, void *data)
     CmpVecProd(tmp,x2,tmp2);
     CmpVecProd(tmp2,epscoef2,tmp);
     VecScale(tmp,-hxyz);
+    VecPointwiseMult(tmp,tmp,vR);
     MatMultTranspose(A,tmp,ldos2grad);
 
     //combine grad for beta/(ldos1^p1*ldos2^p2)

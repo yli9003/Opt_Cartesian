@@ -127,7 +127,8 @@ double sfg_singleldos(int DegFree,double *epsopt, double *grad, void *data)
   // solve the two fundamental modes and their ldos
   SolveMatrix(PETSC_COMM_WORLD,ksp1,Mone,b1,x1,its1);
   double ldos1,ldos2,tmpldosr,tmpldosi;
-  CmpVecDot(weightedJ1,x1,&tmpldosr,&tmpldosi);
+  MatMult(C,weightedJ1,tmp);
+  CmpVecDot(tmp,x1,&tmpldosr,&tmpldosi);
   ldos1=-hxyz*tmpldosr;
 
   PetscPrintf(PETSC_COMM_WORLD,"---*****The current ldos1 for omega %.4e at step %.5d is %.16e \n", omega1/(2*PI),count,ldos1);
@@ -155,11 +156,11 @@ double sfg_singleldos(int DegFree,double *epsopt, double *grad, void *data)
  /*-------take care of the gradient---------*/
   if (grad) {
     //ldos1grad calculation
-    CmpVecProd(x1,x1,tmp);
-    CmpVecProd(tmp,epscoef1,tmp1);
-    MatMult(D,tmp1,tmp);
-    VecScale(tmp,hxyz/omega1);
-    VecPointwiseMult(tmp,tmp,weight);
+    KSPSolveTranspose(ksp1,weightedJ1,u1);
+    MatMult(C,u1,tmp);
+    CmpVecProd(tmp,x1,tmp1);
+    CmpVecProd(tmp1,epscoef1,tmp);
+    VecScale(tmp,-hxyz);
     VecPointwiseMult(tmp,tmp,vR);
     MatMultTranspose(A,tmp,ldos1grad);
 
