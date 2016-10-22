@@ -26,6 +26,7 @@ int itsH;
 PetscErrorCode makeRefField(Maxwell maxwell, Universals params, Mat A, Mat C, Mat D, Vec vR, KSP ksp, int *its, Vec *ref, Vec *refconj, Vec VecPT);
 PetscErrorCode setupKSP(MPI_Comm comm, KSP *ksp, PC *pc, int solver, int iteronly);
 double pfunc(int DegFree, double *epsopt, double *grad, void *data);
+double pfunc2(int DegFree, double *epsopt, double *grad, void *data);
 
 #undef __FUNCT__ 
 #define __FUNCT__ "main" 
@@ -166,6 +167,54 @@ int main(int argc, char **argv)
 
   if(Job==1){
 
+    char maxwellfile2[PETSC_MAX_PATH_LEN];
+    Maxwell maxwell2;
+    KSP ksp2;
+    PC pc2;
+    int its2=100;
+    Vec refField2, refField2conj;
+    PetscOptionsGetString(PETSC_NULL,"-maxwellfile2",maxwellfile2,PETSC_MAX_PATH_LEN,&flg); MyCheckAndOutputChar(flg,maxwellfile2,"maxwellfile2","maxwellfile2");
+    makemaxwell(maxwellfile2,flagparams,A,D,vR,weight,&maxwell2);
+    setupKSP(PETSC_COMM_WORLD,&ksp2,&pc2,solver,0);
+    makeRefField(maxwell2,flagparams,A,C,D,vR,ksp2,&its2, &refField2, &refField2conj, VecPt);
+    MetaSurfGroup meta2={flagparams.Nx,flagparams.Ny,flagparams.Nz,flagparams.hxyz,epsSReal,epsFReal, maxwell2.omega, maxwell2.M, A, maxwell2.b, maxwell2.J, maxwell2.x, maxwell2.weightedJ, maxwell2.epspmlQ, maxwell2.epsbkg, maxwell2.epsdiff, maxwell2.epscoef, ksp2, &its2, metaphase, 1, refField2, refField2conj, VecPt, flagparams.outputbase, flagparams.filenameComm};
+    
+    char maxwellfile3[PETSC_MAX_PATH_LEN];
+    Maxwell maxwell3;
+    KSP ksp3;
+    PC pc3;
+    int its3=100;
+    Vec refField3, refField3conj;
+    PetscOptionsGetString(PETSC_NULL,"-maxwellfile3",maxwellfile3,PETSC_MAX_PATH_LEN,&flg); MyCheckAndOutputChar(flg,maxwellfile3,"maxwellfile3","maxwellfile3");
+    makemaxwell(maxwellfile3,flagparams,A,D,vR,weight,&maxwell3);
+    setupKSP(PETSC_COMM_WORLD,&ksp3,&pc3,solver,0);
+    makeRefField(maxwell3,flagparams,A,C,D,vR,ksp3,&its3, &refField3, &refField3conj, VecPt);
+    MetaSurfGroup meta3={flagparams.Nx,flagparams.Ny,flagparams.Nz,flagparams.hxyz,epsSReal,epsFReal, maxwell3.omega, maxwell3.M, A, maxwell3.b, maxwell3.J, maxwell3.x, maxwell3.weightedJ, maxwell3.epspmlQ, maxwell3.epsbkg, maxwell3.epsdiff, maxwell3.epscoef, ksp3, &its3, metaphase, 1, refField3, refField3conj, VecPt, flagparams.outputbase, flagparams.filenameComm};
+    
+    char maxwellfile4[PETSC_MAX_PATH_LEN];
+    Maxwell maxwell4;
+    KSP ksp4;
+    PC pc4;
+    int its4=100;
+    Vec refField4, refField4conj;
+    PetscOptionsGetString(PETSC_NULL,"-maxwellfile4",maxwellfile4,PETSC_MAX_PATH_LEN,&flg); MyCheckAndOutputChar(flg,maxwellfile4,"maxwellfile4","maxwellfile4");
+    makemaxwell(maxwellfile4,flagparams,A,D,vR,weight,&maxwell4);
+    setupKSP(PETSC_COMM_WORLD,&ksp4,&pc4,solver,0);
+    makeRefField(maxwell4,flagparams,A,C,D,vR,ksp4,&its4, &refField4, &refField4conj, VecPt);
+    MetaSurfGroup meta4={flagparams.Nx,flagparams.Ny,flagparams.Nz,flagparams.hxyz,epsSReal,epsFReal, maxwell4.omega, maxwell4.M, A, maxwell4.b, maxwell4.J, maxwell4.x, maxwell4.weightedJ, maxwell4.epspmlQ, maxwell4.epsbkg, maxwell4.epsdiff, maxwell4.epscoef, ksp4, &its4, metaphase, 1, refField4, refField4conj, VecPt, flagparams.outputbase, flagparams.filenameComm};
+
+    char maxwellfile5[PETSC_MAX_PATH_LEN];
+    Maxwell maxwell5;
+    KSP ksp5;
+    PC pc5;
+    int its5=100;
+    Vec refField5, refField5conj;
+    PetscOptionsGetString(PETSC_NULL,"-maxwellfile5",maxwellfile5,PETSC_MAX_PATH_LEN,&flg); MyCheckAndOutputChar(flg,maxwellfile5,"maxwellfile5","maxwellfile5");
+    makemaxwell(maxwellfile5,flagparams,A,D,vR,weight,&maxwell5);
+    setupKSP(PETSC_COMM_WORLD,&ksp5,&pc5,solver,0);
+    makeRefField(maxwell5,flagparams,A,C,D,vR,ksp5,&its5, &refField5, &refField5conj, VecPt);
+    MetaSurfGroup meta5={flagparams.Nx,flagparams.Ny,flagparams.Nz,flagparams.hxyz,epsSReal,epsFReal, maxwell5.omega, maxwell5.M, A, maxwell5.b, maxwell5.J, maxwell5.x, maxwell5.weightedJ, maxwell5.epspmlQ, maxwell5.epsbkg, maxwell5.epsdiff, maxwell5.epscoef, ksp5, &its5, metaphase, 1, refField5, refField5conj, VecPt, flagparams.outputbase, flagparams.filenameComm};
+
     int DegFree=flagparams.DegFree;
 
     /*---------Optimization--------*/
@@ -221,8 +270,8 @@ int main(int argc, char **argv)
       fclose(ptf);
 
     }
-    lb[DegFreeAll-1]=0.0000001;
-    ub[DegFreeAll-1]=10;
+    lb[DegFreeAll-1]=-3;
+    ub[DegFreeAll-1]=3;
 
     opt = nlopt_create(mynloptalg, DegFreeAll);
     nlopt_set_lower_bounds(opt,lb);
@@ -240,6 +289,10 @@ int main(int argc, char **argv)
       }
 
     nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta1,1e-8);
+    nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta2,1e-8);
+    nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta3,1e-8);
+    nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta4,1e-8);
+    nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta5,1e-8);
 
     if(frac<1.0) nlopt_add_inequality_constraint(opt,pfunc,&frac,1e-8);
     nlopt_set_max_objective(opt,minimaxobjfun,NULL);   
@@ -318,7 +371,7 @@ int main(int argc, char **argv)
 	nlopt_set_local_optimizer(opt,local_opt);
       }
 
-    if(frac<1.0) nlopt_add_inequality_constraint(opt,pfunc,&frac,1e-8);
+    if(frac<1.0) nlopt_add_inequality_constraint(opt,pfunc2,&frac,1e-8);
     nlopt_set_max_objective(opt,metasurface,&meta1);   
 
     result = nlopt_optimize(opt,epsopt,&maxf);
@@ -395,6 +448,26 @@ double pfunc(int DegFree, double *epsopt, double *grad, void *data)
     grad[i]=1-2*epsopt[i];
   }
   grad[DegFree-1]=0;
+
+  PetscPrintf(PETSC_COMM_WORLD,"******the current binaryindex is %1.6e \n",sumeps);
+  PetscPrintf(PETSC_COMM_WORLD,"******the current binaryexcess  is %1.6e \n",sumeps-frac*max);
+
+  return sumeps - frac*max;
+}
+
+double pfunc2(int DegFree, double *epsopt, double *grad, void *data)
+{
+  int i;
+  double sumeps;
+  double max=DegFree/4;
+  double *tmp  = (double *) data;
+  double frac= *tmp;
+
+  sumeps=0.0;
+  for (i=0;i<DegFree;i++){
+    sumeps+=fabs(epsopt[i]*(1-epsopt[i]));
+    grad[i]=1-2*epsopt[i];
+  }
 
   PetscPrintf(PETSC_COMM_WORLD,"******the current binaryindex is %1.6e \n",sumeps);
   PetscPrintf(PETSC_COMM_WORLD,"******the current binaryexcess  is %1.6e \n",sumeps-frac*max);

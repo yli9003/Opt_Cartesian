@@ -108,12 +108,6 @@ double sfg_arbitraryPol(int DegFree,double *epsopt, double *grad, void *data)
   VecDuplicate(vR,&Grad5);
   VecDuplicate(vR,&Grad6);
 
-  Vec conjwtJ1, conjwtJ2;
-  VecDuplicate(vR,&conjwtJ1);
-  VecDuplicate(vR,&conjwtJ2);
-  MatMult(C,weightedJ1,conjwtJ1);
-  MatMult(C,weightedJ2,conjwtJ2);
-
   ierr=VecDuplicate(epsSReal,&vgrad); CHKERRQ(ierr);
   ierr=VecDuplicate(epsSReal,&epsgrad); CHKERRQ(ierr);
   ierr=VecDuplicate(epsSReal,&betagrad); CHKERRQ(ierr);
@@ -138,9 +132,9 @@ double sfg_arbitraryPol(int DegFree,double *epsopt, double *grad, void *data)
   SolveMatrix(PETSC_COMM_WORLD,ksp1,Mone,b1,x1,its1);
   SolveMatrix(PETSC_COMM_WORLD,ksp2,Mtwo,b2,x2,its2);
   double ldos1,ldos2,tmpldosr,tmpldosi;
-  CmpVecDot(conjwtJ1,x1,&tmpldosr,&tmpldosi);
+  CmpVecDot(weightedJ1,x1,&tmpldosr,&tmpldosi);
   ldos1=-hxyz*tmpldosr;
-  CmpVecDot(conjwtJ2,x2,&tmpldosr,&tmpldosi);
+  CmpVecDot(weightedJ2,x2,&tmpldosr,&tmpldosi);
   ldos2=-hxyz*tmpldosr;
 
   PetscPrintf(PETSC_COMM_WORLD,"---*****The current ldos1 for omega %.4e at step %.5d is %.16e \n", omega1/(2*PI),count,ldos1);
@@ -271,19 +265,21 @@ double sfg_arbitraryPol(int DegFree,double *epsopt, double *grad, void *data)
     MatMultTranspose(A,tmp,betagrad);
 
     //ldos1grad calculation
-    KSPSolveTranspose(ksp1,weightedJ1,u1);
-    MatMult(C,u1,tmp);
-    CmpVecProd(tmp,x1,tmp1);
-    CmpVecProd(tmp1,epscoef1,tmp);
-    VecScale(tmp,-hxyz);
+    CmpVecProd(x1,x1,tmp);
+    CmpVecProd(tmp,epscoef1,tmp1);
+    MatMult(D,tmp1,tmp);
+    VecScale(tmp,hxyz/omega1);
+    VecPointwiseMult(tmp,tmp,weight);
+    VecPointwiseMult(tmp,tmp,vR);
     MatMultTranspose(A,tmp,ldos1grad);
 
     //ldos2grad calculation
-    KSPSolveTranspose(ksp2,weightedJ2,u2);
-    MatMult(C,u2,tmp);
-    CmpVecProd(tmp,x2,tmp2);
-    CmpVecProd(tmp2,epscoef2,tmp);
-    VecScale(tmp,-hxyz);
+    CmpVecProd(x2,x2,tmp);
+    CmpVecProd(tmp,epscoef2,tmp2);
+    MatMult(D,tmp2,tmp);
+    VecScale(tmp,hxyz/omega2);
+    VecPointwiseMult(tmp,tmp,weight);
+    VecPointwiseMult(tmp,tmp,vR);
     MatMultTranspose(A,tmp,ldos2grad);
 
     //combine grad for beta/(ldos1^p1*ldos2^p2)
@@ -332,8 +328,6 @@ double sfg_arbitraryPol(int DegFree,double *epsopt, double *grad, void *data)
   VecDestroy(&Grad4);
   VecDestroy(&Grad5);
   VecDestroy(&Grad6);
-  VecDestroy(&conjwtJ1);
-  VecDestroy(&conjwtJ2);
 
   VecDestroy(&vgrad);
   VecDestroy(&epsgrad);

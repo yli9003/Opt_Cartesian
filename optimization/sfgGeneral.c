@@ -234,7 +234,28 @@ int main(int argc, char **argv)
   ierr = PetscObjectSetName((PetscObject) weight, "weight");CHKERRQ(ierr);
 
   GetWeightVecGeneralSym(weight,Nx,Ny,Nz,LowerPMLx,LowerPMLy,LowerPMLz); 
-  
+
+  int restrictNL;
+  getint("-restrictNL",&restrictNL,0);
+  if(restrictNL){
+    double *tmpopt;
+    Vec tmpF,tmpS;
+    int itmp;
+    tmpopt = (double *) malloc(sizeof(double)*DegFree);
+    for(itmp=0;itmp<DegFree;itmp++){
+      tmpopt[itmp]=0;
+    }
+    for(itmp=0;itmp<DegFree1;itmp++){
+      tmpopt[itmp]=1;
+    }
+    MatCreateVecs(A,&tmpS, &tmpF);
+    ArrayToVec(tmpopt,tmpS);
+    MatMult(A,tmpS,tmpF);
+    VecPointwiseMult(weight,weight,tmpF);
+    free(tmpopt);
+    VecDestroy(&tmpS);
+    VecDestroy(&tmpF);
+  }
   /*----Set up the universal parts of M1, M2 and M3-------*/
   Mat M1, M2, M3;
   Vec muinvpml1, muinvpml2, muinvpml3;
