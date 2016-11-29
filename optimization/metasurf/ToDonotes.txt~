@@ -1,0 +1,7 @@
+- clean up the reference field calculation. as of now, there is some bug with the reference field calculated outside the opt function call.
+
+- the above would streamline the calculation and save computation time
+
+- implement the constraint frac*|Eref|^2 - |E|^2 < 0 to ensure a threshold transmission
+
+- fix the filename passing issue

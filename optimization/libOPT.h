@@ -299,10 +299,13 @@ typedef struct{
   Vec epscoef;
   KSP ksp;
   int *its;
+  KSP refksp;
+  int *refits;
   double metaphase;
   int trigoption;
   Vec refField;
   Vec refFieldconj;
+  //double refmag;
   Vec VecPt;
   int outputbase;
   char filenameComm[PETSC_MAX_PATH_LEN];
@@ -551,3 +554,10 @@ PetscErrorCode makethreelayeredepsbkg(Vec epsBkg, int Nx, int Ny, int Nz, int Nz
 PetscErrorCode makethreelayeredepsdiff(Vec epsDiff, int Nx, int Ny, int Nz, int Nzo, int Mz, double epsdiff1, double epsdiff2, double epsdiff3);
 
 PetscErrorCode GetWeightVecGeneralSym(Vec weight,int Nx, int Ny, int Nz, int lx, int ly, int lz);
+
+// from layeredA.c
+PetscErrorCode layeredA(MPI_Comm comm, Mat *Aout, int Nx, int Ny, int Nz, int nlayers, int Nxo, int Nyo, int* Nzo, int Mx, int My, int* Mz, int Mzslab);
+
+PetscErrorCode layeredepsbkg(Vec epsBkg, int Nx, int Ny, int Nz, int nlayers, int* Nzo, int* Mz, double* epsbkg, double epssub, double epsair, double epsmid);
+
+PetscErrorCode layeredepsdiff(Vec epsDiff, int Nx, int Ny, int Nz, int nlayers, int* Nzo, int* Mz, double* epsdiff, double epssubdiff, double epsairdiff, double epsmiddiff);

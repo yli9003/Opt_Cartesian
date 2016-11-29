@@ -47,6 +47,7 @@ double metasurface(int DegFree,double *epsopt, double *grad, void *data)
   Vec refField = ptdata->refField;
   Vec refFieldconj = ptdata->refFieldconj;
   Vec VecPt = ptdata->VecPt;
+  int superposeopt = ptdata->trigoption;
   int outputbase = ptdata->outputbase;
   char filenameComm[PETSC_MAX_PATH_LEN];
   strcpy(filenameComm,ptdata->filenameComm);
@@ -152,9 +153,10 @@ double metasurface(int DegFree,double *epsopt, double *grad, void *data)
     VecSet(tmp,0.0);
     VecAXPY(tmp,1.0,Grad1);
     VecAXPY(tmp,-1.0,Grad2);
-    VecScale(tmp,1.0/sqrt(fieldmag));
-    VecAXPY(tmp,-superposephase/(2*sqrt(fieldmag*fieldmag*fieldmag)),Grad2);
-    //VecAXPY(tmp,-1.0/(2*sqrt(fieldmag*fieldmag*fieldmag)),Grad2);
+    if(superposeopt){
+      VecScale(tmp,1.0/sqrt(fieldmag));
+      VecAXPY(tmp,-superposephase/(2*sqrt(fieldmag*fieldmag*fieldmag)),Grad2);
+    }
 
     MatMultTranspose(A,tmp,vgrad);
     
@@ -188,7 +190,7 @@ double metasurface(int DegFree,double *epsopt, double *grad, void *data)
   VecDestroy(&vgrad);
   VecDestroy(&epsgrad);
 
-  return superposephasenormalized;
+  return (superposeopt==0)*superposephase + (superposeopt==1)*superposephasenormalized;
 }
 
 PetscErrorCode MakeVecPt(Vec VecPt, int Nx, int Ny, int Nz, int ix, int iy, int iz, int ic)
