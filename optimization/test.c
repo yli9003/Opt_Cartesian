@@ -22,10 +22,18 @@ Mat Hfilt;
 KSP kspH;
 int itsH;
 
-/*------------------------------------------------------*/
+typedef struct {
+  double *epsdiff;
+  double *epsbkg;
+  double epssub;
+  double epssubdiff;
+  double epsair;
+  double epsairdiff;
+  double epsmid;
+  double epsmiddiff;
+} epsinfo;
 
-PetscErrorCode setupKSP(MPI_Comm comm, KSP *ksp, PC *pc, int solver, int iteronly);
-double pfunc(int DegFree, double *epsopt, double *grad, void *data);
+/*------------------------------------------------------*/
 
 #undef __FUNCT__ 
 #define __FUNCT__ "main" 
@@ -41,27 +49,47 @@ int main(int argc, char **argv)
   if(myrank==0) 
     mma_verbose=1;
 
-  int nlayers=3;
   int Mx=100, My=1;
-  int *Mz;
   int Mzslab, DegFree;
-  Mz = (int *) malloc(nlayers*sizeof(int));
-  Mz[0]=10;
-  Mz[1]=7;
-  Mz[2]=15;
   int Npmlx=25, Npmly=0, Npmlz=25;
   int Nx=150, Ny=1, Nz=250;
   int Nxo=(Nx-Mx)/2;
   int Nyo=0;
-  int *Nzo;
-  Nzo = (int *) malloc(nlayers*sizeof(int));
-  Nzo[0]=60;
-  Nzo[1]=80;
-  Nzo[2]=100;
   Mzslab=1;
-  DegFree = nlayers*Mx*My;
+
+  int nlayers;
+  int *Mz, *Nzo;
+  epsinfo eps;
+  int i;
+  DegFree=0;
+  getint("-nlayers",&nlayers,1);
+  Mz =(int *) malloc(nlayers*sizeof(int));
+  Nzo=(int *) malloc(nlayers*sizeof(int));
+  eps.epsdiff=(double *) malloc(nlayers*sizeof(double));
+  eps.epsbkg=(double *) malloc(nlayers*sizeof(double));
+  char tmpflg[PETSC_MAX_PATH_LEN];
+  for (i=0;i<nlayers;i++) {
+    sprintf(tmpflg,"-Mz[%d]",i+1);
+    getint(tmpflg,Mz+i,10);
+    sprintf(tmpflg,"-Nzo[%d]",i+1);
+    getint(tmpflg,Nzo+i,(Nz-Mz[i])/2);
+    DegFree=DegFree+Mx*My*((Mzslab==0)?Mz[i]:1);
+
+    sprintf(tmpflg,"-epsdiff[%d]",i+1);
+    getreal(tmpflg,eps.epsdiff+i,3.6575);
+    sprintf(tmpflg,"-epsbkg[%d]",i+1);
+    getreal(tmpflg,eps.epsbkg+i,2.1025);
+
+  }
+  getreal("-epssubdiff",&eps.epssubdiff,0);
+  getreal("-epsairdiff",&eps.epsairdiff,0);
+  getreal("-epsmiddiff",&eps.epsmiddiff,0);
+  getreal("-epssub",&eps.epssub,2.1025);
+  getreal("-epsair",&eps.epsair,1.0);
+  getreal("-epsmid",&eps.epsmid,2.1025);
 
   layeredA(PETSC_COMM_WORLD,&A, Nx,Ny,Nz, nlayers,Nxo,Nyo,Nzo, Mx,My,Mz, Mzslab);
+  PetscPrintf(PETSC_COMM_WORLD,"layered A created. \n");
   Vec epsSReal;
   MatCreateVecs(A,&epsSReal, &epsFReal);
   double *epsopt;
@@ -69,7 +97,6 @@ int main(int argc, char **argv)
   epsopt = (double *) malloc(DegFree*sizeof(double));
   ptf = fopen("testinput.txt","r");
   PetscPrintf(PETSC_COMM_WORLD,"reading from input files \n");
-  int i;
   for (i=0;i<DegFree;i++)
     {
       fscanf(ptf,"%lf",&epsopt[i]);
@@ -80,24 +107,20 @@ int main(int argc, char **argv)
   MatMult(A,epsSReal,epsFReal);  
 
 
-  Vec epsBkg, epsDiff;
+  Vec epsBkg, epsDiff, epsFull;
   VecDuplicate(epsFReal,&epsBkg);
   VecDuplicate(epsFReal,&epsDiff);
-  double *epsbkg, *epsdiff;
-  epsbkg = (double *) malloc(nlayers*sizeof(double));
-  epsdiff = (double *) malloc(nlayers*sizeof(double));
-  epsbkg[0]=1;
-  epsbkg[1]=1;
-  epsbkg[2]=1;
-  epsdiff[0]=1.5;
-  epsdiff[1]=2.0;
-  epsdiff[2]=1.1;
-  layeredepsbkg(epsBkg, Nx,Ny,Nz, nlayers,Nzo,Mz, epsbkg, 2,1,1.3);
-  layeredepsdiff(epsDiff, Nx,Ny,Nz, nlayers,Nzo,Mz, epsdiff, 0,0,0);
+  VecDuplicate(epsFReal,&epsFull);
+  layeredepsbkg(epsBkg, Nx,Ny,Nz, nlayers,Nzo,Mz, eps.epsbkg, eps.epssub, eps.epsair, eps.epsmid);
+  layeredepsdiff(epsDiff, Nx,Ny,Nz, nlayers,Nzo,Mz, eps.epsdiff, eps.epssubdiff, eps.epsairdiff, eps.epsmiddiff);
+
+  VecPointwiseMult(epsFull,epsFReal,epsDiff);
+  VecAXPY(epsFull,1.0,epsBkg);
 
   OutputVec(PETSC_COMM_WORLD, epsFReal, "epsF",".m");
   OutputVec(PETSC_COMM_WORLD, epsDiff, "epsDiff",".m");
   OutputVec(PETSC_COMM_WORLD, epsBkg, "epsBkg",".m");
+  OutputVec(PETSC_COMM_WORLD, epsFull, "epsFull",".m");
 
   /*------------ finalize the program -------------*/
 
@@ -111,62 +134,3 @@ int main(int argc, char **argv)
 
   return 0;
 }
-
-double pfunc(int DegFree, double *epsopt, double *grad, void *data)
-{
-  int i;
-  double sumeps;
-  double max=DegFree/4;
-  double *tmp  = (double *) data;
-  double frac= *tmp;
-
-  sumeps=0.0;
-  for (i=0;i<DegFree;i++){
-    sumeps+=fabs(epsopt[i]*(1-epsopt[i]));
-    grad[i]=1-2*epsopt[i];
-  }
-
-  PetscPrintf(PETSC_COMM_WORLD,"******the current binaryindex is %1.6e \n",sumeps);
-  PetscPrintf(PETSC_COMM_WORLD,"******the current binaryexcess  is %1.6e \n",sumeps-frac*max);
-
-  return sumeps - frac*max;
-}
-
-PetscErrorCode setupKSP(MPI_Comm comm, KSP *kspout, PC *pcout, int solver, int iteronly)
-{
-  PetscErrorCode ierr;
-  KSP ksp;
-  PC pc; 
-  
-  ierr = KSPCreate(comm,&ksp);CHKERRQ(ierr);
-  ierr = KSPSetType(ksp, KSPGMRES);CHKERRQ(ierr);
-  ierr = KSPGetPC(ksp,&pc);CHKERRQ(ierr);
-  ierr = PCSetType(pc,PCLU);CHKERRQ(ierr);
-  if (solver==0) {
-  ierr = PCFactorSetMatSolverPackage(pc,MATSOLVERPASTIX);CHKERRQ(ierr);
-  }
-  else if (solver==1){
-  ierr = PCFactorSetMatSolverPackage(pc,MATSOLVERMUMPS);CHKERRQ(ierr);
-  }
-  else {
-  ierr = PCFactorSetMatSolverPackage(pc,MATSOLVERSUPERLU_DIST);CHKERRQ(ierr);
-  }
-  ierr = KSPSetTolerances(ksp,1e-14,PETSC_DEFAULT,PETSC_DEFAULT,maxit);CHKERRQ(ierr);
-
-  if (iteronly==1){
-  ierr = KSPSetType(ksp, KSPLSQR);CHKERRQ(ierr);
-  ierr = PCSetType(pc,PCNONE);CHKERRQ(ierr);
-  ierr = KSPSetTolerances(ksp,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT);CHKERRQ(ierr);
-  ierr = KSPMonitorSet(ksp,KSPMonitorTrueResidualNorm,NULL,0);CHKERRQ(ierr);
-  }
-
-  ierr = PCSetFromOptions(pc);
-  ierr = KSPSetFromOptions(ksp);CHKERRQ(ierr);
-
-  *kspout=ksp;
-  *pcout=pc;
-
-  PetscFunctionReturn(0);
-
-}
-

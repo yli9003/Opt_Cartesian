@@ -1,0 +1,12 @@
+-epsdiff[1] 6.8975 
+-epsbkg[1] 2.1025 
+-epsdiff[2] 6.8975 
+-epsbkg[2] 2.1025 
+-epsdiff[3] 8 
+-epsbkg[3] 1 
+-epssub 2.1025 
+-epsair 1 
+-epsmid 2.1025 
+-epssubdiff 0
+-epsairdiff 0
+-epsmiddiff 0

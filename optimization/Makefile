@@ -1,4 +1,4 @@
-all: metasurfexec makegeomexec optexec sixmodes_exec c4vopt_exec EPopt_exec solver_exec fiber_exec blochdirac_exec degen_exec c4voptvar_exec penalty_exec penalty2_exec penalty3_exec penalty4_exec c3vopt_exec c3vsolver_exec chiralopt_exec chiraloptmaxmin_exec sweepldos_exec sweepfreq_exec sfg_exec sfgGeneral_exec graphene_exec test_exec
+all: metasurfexec makegeomexec optexec sixmodes_exec c4vopt_exec EPopt_exec solver_exec fiber_exec blochdirac_exec degen_exec c4voptvar_exec penalty_exec penalty2_exec penalty3_exec penalty4_exec c3vopt_exec c3vsolver_exec chiralopt_exec chiraloptmaxmin_exec sweepldos_exec sweepfreq_exec sfg_exec sfgGeneral_exec graphene_exec test_exec sfgGenerallayered_exec
 
 export PETSC_DIR=/opt/local/petsc-3.6.3
 export PETSC_ARCH=arch-opt
@@ -7,7 +7,7 @@ export NloptLibPath=/usr/local/lib/
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
-CLEANFILES = metasurf.o makegeom.o opt.o sixldos.o c4vopt.o EPopt.o solver.o fiber.o blochdirac.o degen.o c4voptvar.o penalty.o penalty2.o penalty3.o penalty4.o c3vopt.o c3vsolver.o chiralopt.o chiraloptmaxmin.o sweepldos.o sweepfreq.o sfg.o sfgGeneral.o graphene.o test.o
+CLEANFILES = metasurf.o makegeom.o opt.o sixldos.o c4vopt.o EPopt.o solver.o fiber.o blochdirac.o degen.o c4voptvar.o penalty.o penalty2.o penalty3.o penalty4.o c3vopt.o c3vsolver.o chiralopt.o chiraloptmaxmin.o sweepldos.o sweepfreq.o sfg.o sfgGeneral.o graphene.o test.o sfgGenerallayered.o
 
 metasurfexec: metasurf.o 
 	$(CLINKER) metasurf.o -o metasurfexec ${NloptLibPath}/libnlopt.a ${CavityLibPath}/libOPT.a $(PETSC_LIB)
@@ -133,5 +133,10 @@ test_exec: test.o
 	$(CLINKER) test.o -o test_exec ${NloptLibPath}/libnlopt.a ${CavityLibPath}/libOPT.a $(PETSC_LIB)
 test: test.o
 	$(CLINKER) -Wall -g -o $@ test.o 
+
+sfgGenerallayered_exec: sfgGenerallayered.o
+	$(CLINKER) sfgGenerallayered.o -o sfgGenerallayered_exec ${NloptLibPath}/libnlopt.a ${CavityLibPath}/libOPT.a $(PETSC_LIB)
+sfgGenerallayered: sfgGenerallayered.o
+	$(CLINKER) -Wall -g -o $@ sfgGenerallayered.o 
 
 

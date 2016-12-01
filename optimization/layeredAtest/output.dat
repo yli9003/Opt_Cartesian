@@ -1,0 +1,22 @@
+--------Initializing------ 
+---nlayers is 3 
+---Mz[1] is 10 
+---Nzo[1] is 60 
+---epsdiff[1] is 6.8975 
+---epsbkg[1] is 2.1025 
+---Mz[2] is 10 
+---Nzo[2] is 80 
+---epsdiff[2] is 6.8975 
+---epsbkg[2] is 2.1025 
+---Mz[3] is 10 
+---Nzo[3] is 100 
+---epsdiff[3] is 8 
+---epsbkg[3] is 1 
+---epssubdiff is 0 
+---epsairdiff is 0 
+---epsmiddiff is 0 
+---epssub is 2.1025 
+---epsair is 1 
+---epsmid is 2.1025 
+layered A created. 
+reading from input files 
