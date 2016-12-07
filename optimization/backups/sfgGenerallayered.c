@@ -483,15 +483,11 @@ int main(int argc, char **argv)
   fclose(ptf);
 
   //DEBUG
-  int printinitial;
-  getint("-printinitial",&printinitial,0);
-  if(printinitial){
-    ArrayToVec(epsopt,epsSReal);
-    MatMult(A,epsSReal,epsFReal);
-    VecPointwiseMult(epsFReal,epsFReal,epsI);
-    VecAXPY(epsFReal,1.0,epsmedium1);
-    OutputVec(PETSC_COMM_WORLD, epsFReal, "initial_","epsF.m");
-  }
+  ArrayToVec(epsopt,epsSReal);
+  MatMult(A,epsSReal,epsFReal);
+  VecPointwiseMult(epsFReal,epsFReal,epsI);
+  VecAXPY(epsFReal,1.0,epsmedium1);
+  OutputVec(PETSC_COMM_WORLD, epsFReal, "initial_","epsF.m");
 
   double *grad;
   grad = (double *) malloc(DegFree*sizeof(double));
@@ -642,38 +638,8 @@ if (Job==2){
   }
 
 
- }
+}
 
-if(Job==3){
-   
-  Vec eps1Full, eps2Full, eps3Full;
-  VecDuplicate(vR,&eps1Full);
-  VecDuplicate(vR,&eps2Full);
-  VecDuplicate(vR,&eps3Full);
-
-  ArrayToVec(epsopt,epsSReal);
-  MatMult(A,epsSReal,epsFReal);
-
-  VecPointwiseMult(eps1Full,epsFReal,epsI);
-  VecAXPY(eps1Full,1.0,epsmedium1);
-  VecPointwiseMult(eps1Full,eps1Full,vR);
-  OutputVec(PETSC_COMM_WORLD, eps1Full, "eps1Full",".m");
-
-  VecPointwiseMult(eps2Full,epsFReal,epsII);
-  VecAXPY(eps2Full,1.0,epsmedium2);
-  VecPointwiseMult(eps2Full,eps2Full,vR);
-  OutputVec(PETSC_COMM_WORLD, eps2Full, "eps2Full",".m");
-  
-  VecPointwiseMult(eps3Full,epsFReal,epsIII);
-  VecAXPY(eps3Full,1.0,epsmedium3);
-  VecPointwiseMult(eps3Full,eps3Full,vR);
-  OutputVec(PETSC_COMM_WORLD, eps3Full, "eps3Full",".m");
-
-  VecDestroy(&eps1Full);
-  VecDestroy(&eps2Full);
-  VecDestroy(&eps3Full);
-
- }
 /*------------------------------------------------*/
 /*------------------------------------------------*/
 /*------------------------------------------------*/

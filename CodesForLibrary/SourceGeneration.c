@@ -169,12 +169,12 @@ PetscErrorCode SourceBlock(MPI_Comm comm, Vec *bout, int Nx, int Ny, int Nz, dou
 
   
   for (i=0;i<Nx;i++)
-    if ((i*hx>lx) && (i*hx<ux))
+    if ((i*hx>=lx) && (i*hx<ux))
       {for (j=0; j<Ny;j++)
-	  if ((j*hy>ly) && (j*hy<uy))
+	  if ((j*hy>=ly) && (j*hy<uy))
 	    { 
 	      for (k=0; k<Nz; k++)
-		if ((k*hz>lz) && (k*hz<uz)) // uncomment this if z direction is not trivial;
+		if ((k*hz>=lz) && (k*hz<uz)) // uncomment this if z direction is not trivial;
 		{ pos = i*Ny*Nz + j*Nz + k;
 		  if ( ns < pos+Jdir*N+1 && ne > pos + Jdir*N){
 		    if(Jdir==0) VecSetValue(b,pos,amp,INSERT_VALUES);

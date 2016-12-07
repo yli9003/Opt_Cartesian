@@ -18,6 +18,8 @@ extern Mat Hfilt;
 extern KSP kspH;
 extern int itsH;
 
+extern char filenameComm[PETSC_MAX_PATH_LEN];
+
 #undef __FUNCT__ 
 #define __FUNCT__ "metasurface"
 double metasurface(int DegFree,double *epsopt, double *grad, void *data)
@@ -48,8 +50,8 @@ double metasurface(int DegFree,double *epsopt, double *grad, void *data)
   double metaphase = ptdata->metaphase;
   Vec VecPt = ptdata->VecPt;
   int outputbase = ptdata->outputbase;
-  char filenameComm[PETSC_MAX_PATH_LEN];
-  strcpy(filenameComm,ptdata->filenameComm);
+  //char filenameComm[PETSC_MAX_PATH_LEN];
+  //strcpy(filenameComm,ptdata->filenameComm);
 
   PetscPrintf(PETSC_COMM_WORLD,"----Calculating Metasurface Phase. ------- \n");
   
@@ -152,7 +154,7 @@ double metasurface(int DegFree,double *epsopt, double *grad, void *data)
   double superposephase=superposemag - fieldmag - 1;
   double superposephasenormalized= superposephase/sqrt(fieldmag);
 
-  PetscPrintf(PETSC_COMM_WORLD,"---*****step, superposemag, superposephase, superposephasenormalized: %d, %.8e, %.8e, %.8e\n", count,superposemag,superposephase,superposephasenormalized);
+  PetscPrintf(PETSC_COMM_WORLD,"---*****step, superposemag, superposephase, superposephasenormalized at freq %g: %d, %.8e, %.8e, %.8e\n", count,omega/(2*PI),superposemag,superposephase,superposephasenormalized);
   
   double phase_error=180*acos(superposephasenormalized/2)/PI;
   PetscPrintf(PETSC_COMM_WORLD,"---phase error (degree): %.8e\n", phase_error);

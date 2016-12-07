@@ -308,7 +308,7 @@ typedef struct{
   //double refmag;
   Vec VecPt;
   int outputbase;
-  char filenameComm[PETSC_MAX_PATH_LEN];
+  char *filenameComm;
 } MetaSurfGroup;
 
 // from initialize.c
@@ -561,3 +561,6 @@ PetscErrorCode layeredA(MPI_Comm comm, Mat *Aout, int Nx, int Ny, int Nz, int nl
 PetscErrorCode layeredepsbkg(Vec epsBkg, int Nx, int Ny, int Nz, int nlayers, int* Nzo, int* Mz, double* epsbkg, double epssub, double epsair, double epsmid);
 
 PetscErrorCode layeredepsdiff(Vec epsDiff, int Nx, int Ny, int Nz, int nlayers, int* Nzo, int* Mz, double* epsdiff, double epssubdiff, double epsairdiff, double epsmiddiff);
+
+// from chi3dsfg.c
+double chi3dsfg(int DegFree,double *epsopt, double *grad, void *data);

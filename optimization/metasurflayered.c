@@ -67,17 +67,103 @@ int main(int argc, char **argv)
   Universals flagparams;
   readfromflags(&flagparams);
 
+  /**************/
+
+  int nlayers;
+  int *Mz, *Nzo;
+  epsinfo eps1, eps2, eps3;
+  int i;
+  int DegFree=0;
+  getint("-nlayers",&nlayers,1);
+  Mz =(int *) malloc(nlayers*sizeof(int));
+  Nzo=(int *) malloc(nlayers*sizeof(int));
+  eps1.epsdiff=(double *) malloc(nlayers*sizeof(double));
+  eps2.epsdiff=(double *) malloc(nlayers*sizeof(double));
+  eps3.epsdiff=(double *) malloc(nlayers*sizeof(double));
+  eps1.epsbkg=(double *) malloc(nlayers*sizeof(double));
+  eps2.epsbkg=(double *) malloc(nlayers*sizeof(double));
+  eps3.epsbkg=(double *) malloc(nlayers*sizeof(double));
+  char tmpflg[PETSC_MAX_PATH_LEN];
+  for (i=0;i<nlayers;i++) {
+    sprintf(tmpflg,"-Mz[%d]",i+1);
+    getint(tmpflg,Mz+i,10);
+    sprintf(tmpflg,"-Nzo[%d]",i+1);
+    getint(tmpflg,Nzo+i,LowerPMLz*(Nz-Mz[i])/2);
+    DegFree=DegFree+Mx*My*((Mzslab==0)?Mz[i]:1);
+  
+    sprintf(tmpflg,"-eps1diff[%d]",i+1);
+    getreal(tmpflg,eps1.epsdiff+i,3.6575);
+    sprintf(tmpflg,"-eps1bkg[%d]",i+1);
+    getreal(tmpflg,eps1.epsbkg+i,2.1025);
+
+    sprintf(tmpflg,"-eps2diff[%d]",i+1);
+    getreal(tmpflg,eps2.epsdiff+i,3.6575);
+    sprintf(tmpflg,"-eps2bkg[%d]",i+1);
+    getreal(tmpflg,eps2.epsbkg+i,2.1025);
+
+    sprintf(tmpflg,"-eps3diff[%d]",i+1);
+    getreal(tmpflg,eps3.epsdiff+i,3.6575);
+    sprintf(tmpflg,"-eps3bkg[%d]",i+1);
+    getreal(tmpflg,eps3.epsbkg+i,2.1025);
+
+  }
+  getreal("-eps1subdiff",&eps1.epssubdiff,0);
+  getreal("-eps1airdiff",&eps1.epsairdiff,0);
+  getreal("-eps1middiff",&eps1.epsmiddiff,0);
+  getreal("-eps1sub",&eps1.epssub,2.1025);
+  getreal("-eps1air",&eps1.epsair,1.0);
+  getreal("-eps1mid",&eps1.epsmid,2.1025);
+
+  getreal("-eps2subdiff",&eps2.epssubdiff,0);
+  getreal("-eps2airdiff",&eps2.epsairdiff,0);
+  getreal("-eps2middiff",&eps2.epsmiddiff,0);
+  getreal("-eps2sub",&eps2.epssub,2.1025);
+  getreal("-eps2air",&eps2.epsair,1.0);
+  getreal("-eps2mid",&eps2.epsmid,2.1025);
+
+  getreal("-eps3subdiff",&eps3.epssubdiff,0);
+  getreal("-eps3airdiff",&eps3.epsairdiff,0);
+  getreal("-eps3middiff",&eps3.epsmiddiff,0);
+  getreal("-eps3sub",&eps3.epssub,2.1025);
+  getreal("-eps3air",&eps3.epsair,1.0);
+  getreal("-eps3mid",&eps3.epsmid,2.1025);
+
+  /*************/
+
   Mat A;
   Vec vI, weight;
   Vec epsSReal;
 
   setupMatVecs(flagparams, &A, &C, &D, &vR, &vI, &weight, &epsSReal, &epsFReal);
 
-  ierr=VecCreateSeq(PETSC_COMM_SELF, flagparams.DegFree, &vgradlocal); CHKERRQ(ierr); 
-  ISCreateStride(PETSC_COMM_SELF,flagparams.DegFree,0,1,&from); 
-  ISCreateStride(PETSC_COMM_SELF,flagparams.DegFree,0,1,&to); 
-
-  GetH1d(PETSC_COMM_WORLD,&Hfilt,flagparams.DegFree,sH,nR,&kspH,&pcH);
+  /***********/
+  Mat Atmp;
+  layeredA(PETSC_COMM_WORLD,&Atmp, Nx,Ny,Nz, nlayers,Nxo,Nyo,Nzo, Mx,My,Mz, Mzslab);
+  MatCopy(A,Atmp,SAME_NONZERO_PATTERN);
+  Vec epsI, epsII, epsIII;
+  layeredepsdiff(epsI,   Nx,Ny,Nz, nlayers,Nzo,Mz, eps1.epsdiff, eps1.epssubdiff, eps1.epsairdiff, eps1.epsmiddiff);
+  layeredepsdiff(epsII,  Nx,Ny,Nz, nlayers,Nzo,Mz, eps2.epsdiff, eps2.epssubdiff, eps2.epsairdiff, eps2.epsmiddiff);
+  layeredepsdiff(epsIII, Nx,Ny,Nz, nlayers,Nzo,Mz, eps3.epsdiff, eps3.epssubdiff, eps3.epsairdiff, eps3.epsmiddiff);
+  Vec epsmedium1, epsmedium2, epsmedium3;
+  layeredepsbkg(epsmedium1, Nx,Ny,Nz, nlayers,Nzo,Mz, eps1.epsbkg, eps1.epssub, eps1.epsair, eps1.epsmid);
+  layeredepsbkg(epsmedium2, Nx,Ny,Nz, nlayers,Nzo,Mz, eps2.epsbkg, eps2.epssub, eps2.epsair, eps2.epsmid);
+  layeredepsbkg(epsmedium3, Nx,Ny,Nz, nlayers,Nzo,Mz, eps3.epsbkg, eps3.epssub, eps3.epsair, eps3.epsmid);
+  Vec epspml1, epspml2, epspml3, epspmlQ1, epspmlQ2, epspmlQ3, epscoef1, epscoef2, epscoef3;
+  ierr = VecDuplicate(vR,&epspml1);CHKERRQ(ierr);
+  ierr = VecDuplicate(vR,&epspml2);CHKERRQ(ierr);
+  ierr = VecDuplicate(vR,&epspml3);CHKERRQ(ierr);
+  ierr = VecDuplicate(vR,&epspmlQ1);CHKERRQ(ierr);
+  ierr = VecDuplicate(vR,&epspmlQ2);CHKERRQ(ierr);
+  ierr = VecDuplicate(vR,&epspmlQ3);CHKERRQ(ierr);
+  ierr = VecDuplicate(vR,&epscoef1);CHKERRQ(ierr);
+  ierr = VecDuplicate(vR,&epscoef2);CHKERRQ(ierr);
+  ierr = VecDuplicate(vR,&epscoef3);CHKERRQ(ierr);
+  EpsPMLGeneral(PETSC_COMM_WORLD, epspml1,Nx,Ny,Nz,Npmlx,Npmly,Npmlz,sigmax,sigmay,sigmaz,omega1, LowerPMLx,LowerPMLy,LowerPMLz);
+  EpsPMLGeneral(PETSC_COMM_WORLD, epspml2,Nx,Ny,Nz,Npmlx,Npmly,Npmlz,sigmax,sigmay,sigmaz,omega2, LowerPMLx,LowerPMLy,LowerPMLz);
+  EpsPMLGeneral(PETSC_COMM_WORLD, epspml3,Nx,Ny,Nz,Npmlx,Npmly,Npmlz,sigmax,sigmay,sigmaz,omega3, LowerPMLx,LowerPMLy,LowerPMLz);
+  EpsCombine(D, weight, epspml1, epspmlQ1, epscoef1, flagparams.Qabs, maxwell1.omega, epsI);
+  EpsCombine(D, weight, epspml2, epspmlQ2, epscoef2, flagparams.Qabs, maxwell2.omega, epsII);
+  EpsCombine(D, weight, epspml3, epspmlQ3, epscoef3, flagparams.Qabs, maxwell3.omega, epsIII);
   /****************************************************************************/
 
   double metaphase;
@@ -94,6 +180,17 @@ int main(int argc, char **argv)
   MakeVecPt(VecPt,Nx,Ny,Nz,ixref,iyref,izref,icref-1);
   int inverse;
   getint("-inverse",&inverse,2);
+
+  /******************/
+  char maxwellfile1[PETSC_MAX_PATH_LEN];
+  Maxwell maxwell1;
+  PetscOptionsGetString(PETSC_NULL,"-maxwellfile1",maxwellfile1,PETSC_MAX_PATH_LEN,&flg); MyCheckAndOutputChar(flg,maxwellfile1,"maxwellfile1","maxwellfile1");
+  makemaxwell(maxwellfile1,flagparams,A,D,vR,weight,&maxwell1);
+  VecCopy(epsmedium1,maxwell1.epsbkg);
+  VecCopy(epsI,maxwell1.epsdiff);
+  VecCopy(epspmlQ1,maxwell1.epspmlQ);
+  VecCopy(epscoef1,maxwell1.epscoef);
+  /******************/
 
   double *epsopt;
   FILE *ptf;
@@ -113,14 +210,10 @@ int main(int argc, char **argv)
   int optsuperpose;
   getint("-optsuperpose",&optsuperpose,1);
 
-  char maxwellfile1[PETSC_MAX_PATH_LEN];
-  Maxwell maxwell1;
   KSP ksp1, refksp1;
   PC pc1, refpc1;
   int its1=100, refits1=100;
   Vec refField1, refField1conj;
-  PetscOptionsGetString(PETSC_NULL,"-maxwellfile1",maxwellfile1,PETSC_MAX_PATH_LEN,&flg); MyCheckAndOutputChar(flg,maxwellfile1,"maxwellfile1","maxwellfile1");
-  makemaxwell(maxwellfile1,flagparams,A,D,vR,weight,&maxwell1);
   setupKSP(PETSC_COMM_WORLD,&ksp1,&pc1,solver,0);
   setupKSP(PETSC_COMM_WORLD,&refksp1,&refpc1,solver,0);
   makeRefField(maxwell1,flagparams,A,C,D,vR,refksp1,&refits1, &refField1, &refField1conj, VecPt, inverse);
@@ -572,4 +665,3 @@ PetscErrorCode setupKSP(MPI_Comm comm, KSP *kspout, PC *pcout, int solver, int i
   PetscFunctionReturn(0);
 
 }
-
