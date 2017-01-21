@@ -22,6 +22,8 @@ Mat Hfilt;
 KSP kspH;
 int itsH;
 
+double mintrans=0;
+
 typedef struct {
   double *epsdiff;
   double *epsbkg;
@@ -32,8 +34,6 @@ typedef struct {
   double epsmid;
   double epsmiddiff;
 } epsinfo;
-
-double mintrans;
 
 /*------------------------------------------------------*/
 
@@ -483,10 +483,18 @@ int main(int argc, char **argv)
   int its1=100, its2=100, its3=100;
   int refits1=100, refits2=100, refits3=100;
 
+  Vec refField1, refField2, refField3, refField1conj, refField2conj, refField3conj;
+  VecDuplicate(vR,&refField1);
+  VecDuplicate(vR,&refField2);
+  VecDuplicate(vR,&refField3);
+  VecDuplicate(vR,&refField1conj);
+  VecDuplicate(vR,&refField2conj);
+  VecDuplicate(vR,&refField3conj);
+
   int optsuperpose=1;
-  MetaSurfGroup meta1={Nx,Ny,Nz,hxyz, epsSReal,epsFReal, omega1, M1, A,b1,J1,x1,weightedJ1, epspmlQ1,epsmedium1,epsI  ,epscoef1, ksp1,&its1,refksp1,&refits1, metaphase1,optsuperpose,NULL,NULL, VecPt, outputbase,&filenameComm[0]};
-  MetaSurfGroup meta2={Nx,Ny,Nz,hxyz, epsSReal,epsFReal, omega2, M2, A,b2,J2,x2,weightedJ2, epspmlQ2,epsmedium2,epsII ,epscoef2, ksp2,&its2,refksp2,&refits2, metaphase2,optsuperpose,NULL,NULL, VecPt, outputbase,&filenameComm[0]};
-  MetaSurfGroup meta3={Nx,Ny,Nz,hxyz, epsSReal,epsFReal, omega3, M3, A,b3,J3,x3,weightedJ3, epspmlQ3,epsmedium3,epsIII,epscoef3, ksp3,&its3,refksp3,&refits3, metaphase3,optsuperpose,NULL,NULL, VecPt, outputbase,&filenameComm[0]};
+  MetaSurfGroup meta1={Nx,Ny,Nz,hxyz, epsSReal,epsFReal, omega1, M1, A,b1,J1,x1,weightedJ1, epspmlQ1,epsmedium1,epsI  ,epscoef1, ksp1,&its1,refksp1,&refits1, metaphase1,optsuperpose,refField1,refField1conj, VecPt, outputbase,&filenameComm[0]};
+  MetaSurfGroup meta2={Nx,Ny,Nz,hxyz, epsSReal,epsFReal, omega2, M2, A,b2,J2,x2,weightedJ2, epspmlQ2,epsmedium2,epsII ,epscoef2, ksp2,&its2,refksp2,&refits2, metaphase2,optsuperpose,refField2,refField2conj, VecPt, outputbase,&filenameComm[0]};
+  MetaSurfGroup meta3={Nx,Ny,Nz,hxyz, epsSReal,epsFReal, omega3, M3, A,b3,J3,x3,weightedJ3, epspmlQ3,epsmedium3,epsIII,epscoef3, ksp3,&its3,refksp3,&refits3, metaphase3,optsuperpose,refField3,refField3conj, VecPt, outputbase,&filenameComm[0]};
 
   ierr = PetscPrintf(PETSC_COMM_WORLD,"--------Setting up the KSP variables DONE!--------\n ");CHKERRQ(ierr);
   /*--------Setup the KSP variables DONE. ---------------*/
@@ -612,22 +620,15 @@ int main(int argc, char **argv)
 
     int nummodes;
     getint("-nummodes",&nummodes,2);
-    getreal("-mintrans",&mintrans,0);
     if(nummodes==1){
-      nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta1,1e-8);
-      if(mintrans>0) nlopt_add_inequality_constraint(opt,transmissionmetaconstr,&meta1,1e-8);
+      nlopt_add_inequality_constraint(opt,metascatminimax,&meta1,1e-8);
     }else if(nummodes==2){
-      nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta1,1e-8);
-      if(mintrans>0) nlopt_add_inequality_constraint(opt,transmissionmetaconstr,&meta1,1e-8);
-      nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta2,1e-8);
-      if(mintrans>0) nlopt_add_inequality_constraint(opt,transmissionmetaconstr,&meta2,1e-8);
+      nlopt_add_inequality_constraint(opt,metascatminimax,&meta1,1e-8);
+      nlopt_add_inequality_constraint(opt,metascatminimax,&meta2,1e-8);
     }else{
-      nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta1,1e-8);
-      if(mintrans>0) nlopt_add_inequality_constraint(opt,transmissionmetaconstr,&meta1,1e-8);
-      nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta2,1e-8);
-      if(mintrans>0) nlopt_add_inequality_constraint(opt,transmissionmetaconstr,&meta2,1e-8);
-      nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta3,1e-8);
-      if(mintrans>0) nlopt_add_inequality_constraint(opt,transmissionmetaconstr,&meta3,1e-8);
+      nlopt_add_inequality_constraint(opt,metascatminimax,&meta1,1e-8);
+      nlopt_add_inequality_constraint(opt,metascatminimax,&meta2,1e-8);
+      nlopt_add_inequality_constraint(opt,metascatminimax,&meta3,1e-8);
     };
      
 
@@ -655,7 +656,7 @@ int main(int argc, char **argv)
     for (epscen=s1;epscen<s2;epscen+=ds)
       {
         epsopt[posMj]=epscen;
-        beta = metasurface(DegFree,epsopt,grad,&meta1);
+        beta = metascat(DegFree,epsopt,grad,&meta1);
         PetscPrintf(PETSC_COMM_WORLD,"epscen: %g objfunc: %g objfunc-grad: %g \n", epsopt[posMj], beta, grad[posMj]);
       }
 
@@ -663,24 +664,15 @@ int main(int argc, char **argv)
 
   if(Job==3){
 
-    metasurface(DegFree,epsopt,grad,&meta1);
+    metascat(DegFree,epsopt,grad,&meta1);
     OutputVec(PETSC_COMM_WORLD,meta1.x,"exmField1",".m");
-    metasurface(DegFree,epsopt,grad,&meta2);
+    OutputVec(PETSC_COMM_WORLD,meta1.refField,"refField1",".m");
+    metascat(DegFree,epsopt,grad,&meta2);
     OutputVec(PETSC_COMM_WORLD,meta2.x,"exmField2",".m");
-    metasurface(DegFree,epsopt,grad,&meta3);
+    OutputVec(PETSC_COMM_WORLD,meta2.refField,"refField2",".m");
+    metascat(DegFree,epsopt,grad,&meta3);
     OutputVec(PETSC_COMM_WORLD,meta3.x,"exmField3",".m");
-
-    double *tmpepsopt;
-    tmpepsopt = (double *) malloc(DegFree*sizeof(double));
-    for (i=0;i<DegFree;i++){
-      tmpepsopt[i]=0;
-	};
-    metasurface(DegFree,tmpepsopt,grad,&meta1);
-    OutputVec(PETSC_COMM_WORLD,meta1.x,"refField1",".m");
-    metasurface(DegFree,tmpepsopt,grad,&meta2);
-    OutputVec(PETSC_COMM_WORLD,meta2.x,"refField2",".m");
-    metasurface(DegFree,tmpepsopt,grad,&meta3);
-    OutputVec(PETSC_COMM_WORLD,meta3.x,"refField3",".m");
+    OutputVec(PETSC_COMM_WORLD,meta3.refField,"refField3",".m");
 
     Vec eps1Full, eps2Full, eps3Full;
     VecDuplicate(vR,&eps1Full);
@@ -768,7 +760,7 @@ int main(int argc, char **argv)
       }
 
     if(frac<1.0) nlopt_add_inequality_constraint(opt,pfunc2,&frac,1e-8);
-    nlopt_set_max_objective(opt,metasurface,&meta1);   
+    nlopt_set_max_objective(opt,metascat,&meta1);   
 
     result = nlopt_optimize(opt,epsopt,&maxf);
 
@@ -839,6 +831,13 @@ int main(int argc, char **argv)
   ierr = VecDestroy(&weightedJ1); CHKERRQ(ierr);
   ierr = VecDestroy(&weightedJ2); CHKERRQ(ierr);
   ierr = VecDestroy(&weightedJ3); CHKERRQ(ierr);
+
+  VecDestroy(&refField1);
+  VecDestroy(&refField2);
+  VecDestroy(&refField3);
+  VecDestroy(&refField1conj);
+  VecDestroy(&refField2conj);
+  VecDestroy(&refField3conj);
 
   ierr = KSPDestroy(&ksp1);CHKERRQ(ierr);
   ierr = KSPDestroy(&ksp2);CHKERRQ(ierr);

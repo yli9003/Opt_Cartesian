@@ -23,6 +23,8 @@ int itsH;
 
 char filenameComm[PETSC_MAX_PATH_LEN];
 
+double mintrans=0;
+
 /*------------------------------------------------------*/
 
 PetscErrorCode makeRefField(Maxwell maxwell, Universals params, Mat A, Mat C, Mat D, Vec vR, KSP ksp, int *its, Vec *ref, Vec *refconj, Vec VecPT, int inverse);

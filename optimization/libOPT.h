@@ -534,6 +534,17 @@ double minimaxobjfun(int DegFreeAll,double *epsoptAll, double *gradAll, void *da
 
 PetscErrorCode MakeVecPt(Vec VecPt, int Nx, int Ny, int Nz, int ix, int iy, int iz, int ic);
 
+double transmissionmeta(int DegFree,double *epsopt, double *grad, void *data);
+
+double transmissionmetaconstr(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
+
+double transmissionminimax(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
+
+// from metascatter.c
+double metascat(int DegFree,double *epsopt, double *grad, void *data);
+
+double metascatminimax(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
+
 // from sfg_arbitraryPol.c
 double sfg_arbitraryPol(int DegFree,double *epsopt, double *grad, void *data);
 

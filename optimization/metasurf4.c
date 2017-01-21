@@ -612,27 +612,21 @@ int main(int argc, char **argv)
 
     int nummodes;
     getint("-nummodes",&nummodes,2);
-    getreal("-mintrans",&mintrans,0);
+
     if(nummodes==1){
-      nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta1,1e-8);
-      if(mintrans>0) nlopt_add_inequality_constraint(opt,transmissionmetaconstr,&meta1,1e-8);
+      nlopt_add_inequality_constraint(opt,transmissionminimax,&meta1,1e-8);
     }else if(nummodes==2){
-      nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta1,1e-8);
-      if(mintrans>0) nlopt_add_inequality_constraint(opt,transmissionmetaconstr,&meta1,1e-8);
-      nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta2,1e-8);
-      if(mintrans>0) nlopt_add_inequality_constraint(opt,transmissionmetaconstr,&meta2,1e-8);
+      nlopt_add_inequality_constraint(opt,transmissionminimax,&meta1,1e-8);
+      nlopt_add_inequality_constraint(opt,transmissionminimax,&meta2,1e-8);
     }else{
-      nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta1,1e-8);
-      if(mintrans>0) nlopt_add_inequality_constraint(opt,transmissionmetaconstr,&meta1,1e-8);
-      nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta2,1e-8);
-      if(mintrans>0) nlopt_add_inequality_constraint(opt,transmissionmetaconstr,&meta2,1e-8);
-      nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta3,1e-8);
-      if(mintrans>0) nlopt_add_inequality_constraint(opt,transmissionmetaconstr,&meta3,1e-8);
+      nlopt_add_inequality_constraint(opt,transmissionminimax,&meta1,1e-8);
+      nlopt_add_inequality_constraint(opt,transmissionminimax,&meta2,1e-8);
+      nlopt_add_inequality_constraint(opt,transmissionminimax,&meta3,1e-8);
     };
      
 
     if(frac<1.0) nlopt_add_inequality_constraint(opt,pfunc,&frac,1e-8);
-    nlopt_set_max_objective(opt,minimaxobjfun,NULL);   
+    nlopt_set_min_objective(opt,minimaxobjfun,NULL);   
     
     result = nlopt_optimize(opt,epsoptAll,&maxf);
 
@@ -655,7 +649,7 @@ int main(int argc, char **argv)
     for (epscen=s1;epscen<s2;epscen+=ds)
       {
         epsopt[posMj]=epscen;
-        beta = metasurface(DegFree,epsopt,grad,&meta1);
+        beta = transmissionmeta(DegFree,epsopt,grad,&meta1);
         PetscPrintf(PETSC_COMM_WORLD,"epscen: %g objfunc: %g objfunc-grad: %g \n", epsopt[posMj], beta, grad[posMj]);
       }
 
