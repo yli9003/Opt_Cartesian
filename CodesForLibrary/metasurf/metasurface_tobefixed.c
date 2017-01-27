@@ -180,7 +180,7 @@ double metasurface(int DegFree,double *epsopt, double *grad, void *data)
       fclose(tmpfile);
 
     }
-
+  
   /*------------------------------------------------*/
   /*------------------------------------------------*/
 
@@ -344,7 +344,7 @@ double transmissionmeta(int DegFree,double *epsopt, double *grad, void *data)
   //char filenameComm[PETSC_MAX_PATH_LEN];
   //strcpy(filenameComm,ptdata->filenameComm);
 
-  PetscPrintf(PETSC_COMM_WORLD,"----Calculating Metasurface Transmission for constraint. ------- \n");
+  PetscPrintf(PETSC_COMM_WORLD,"----Calculating Metasurface Transmission. ------- \n");
   
   Vec xconj, xmag, uvstar, uvstarR, uvstarI, vI, tmp, Uone, u1, Utwo, u2, Grad1, Grad2, vgrad, epsgrad;
   VecDuplicate(x,&xconj);
@@ -430,9 +430,30 @@ double transmissionmeta(int DegFree,double *epsopt, double *grad, void *data)
   VecSum(xmag,&xmagscalar);
 
   double trans=pow(xmagscalar/refmag,2);
-  PetscPrintf(PETSC_COMM_WORLD,"---transmission coefficient for constraint: %.8e\n", trans);
+  PetscPrintf(PETSC_COMM_WORLD,"---transmission coefficient for freq %.4e at step %d is: %.8e\n", omega/(2*PI),count,trans);
 
   /*------------------------------------------------*/
+  /*------------------------------------------------*/
+
+  /*-------------- Now store the epsilon at each step--------------*/
+
+  char buffer [100];
+
+  int STORE=1;    
+  if(STORE==1 && (count%outputbase==0))
+    {
+      sprintf(buffer,"%.5depsSReal.m",count);
+      OutputVec(PETSC_COMM_WORLD, epsSReal, "optstep", buffer);
+      
+      FILE *tmpfile;
+      int i;
+      tmpfile = fopen(strcat(buffer,"DOF.txt"),"w");
+      for (i=0;i<DegFree;i++){
+      fprintf(tmpfile,"%0.16e \n",epsopt[i]);}
+      fclose(tmpfile);
+
+    }
+  
   /*------------------------------------------------*/
 
   /*-------take care of the gradient---------*/

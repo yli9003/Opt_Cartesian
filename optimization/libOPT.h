@@ -3,6 +3,28 @@
 #define PI 3.14159265358979e+00
 
 typedef struct{
+  int Nx;
+  int Ny;
+  int Nz;
+  Vec epsSReal;
+  Vec epsFReal;
+  double omega;
+  Mat M;
+  Mat A;
+  Vec b;
+  Vec J;
+  Vec x;
+  Vec epspmlQ;
+  Vec epsmedium;
+  Vec epsDiff;
+  Vec epscoef;
+  KSP ksp;
+  int *its;
+  Vec VecVol;
+  int outputbase;
+} QGroup;
+
+typedef struct{
   int Mx;
   int My;
   int Mz;
@@ -575,3 +597,8 @@ PetscErrorCode layeredepsdiff(Vec epsDiff, int Nx, int Ny, int Nz, int nlayers, 
 
 // from chi3dsfg.c
 double chi3dsfg(int DegFree,double *epsopt, double *grad, void *data);
+
+// from qfactor.c
+double qfactor(int DegFree,double *epsopt, double *grad, void *data);
+
+PetscErrorCode makeBlock(MPI_Comm comm, Vec *bout, int Nx, int Ny, int Nz, int lx, int ux, int ly, int uy, int lz, int uz);
