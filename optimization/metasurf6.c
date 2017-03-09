@@ -712,11 +712,23 @@ int main(int argc, char **argv)
 
     }
     //make sure that the pixels near boundaries are fixed
-    int fixedendpts;
+    int *fixedendptsarray;
+    fixedendptsarray = (int *) malloc(nlayers*sizeof(int));
     int ilayer;
-    getint("-fixedendpts",&fixedendpts,5);
+    int fixedendpts;
+    getint("-fixedendpts",&fixedendpts,0);
+    if(fixedendpts==0){
+      for(ilayer=0;ilayer<nlayers;ilayer++){
+	sprintf(tmpflg,"-fixed[%d]",ilayer+1);
+	getint(tmpflg,fixedendptsarray+ilayer,5);
+      }
+    }else{
+      for(ilayer=0;ilayer<nlayers;ilayer++){
+	fixedendptsarray[ilayer]=fixedendpts;
+      }
+    }
     for(ilayer=0;ilayer<nlayers;ilayer++){
-      for(i=0;i<fixedendpts;i++){
+      for(i=0;i<fixedendptsarray[ilayer];i++){
 	lb[ilayer*Mx+i]=0;
 	lb[(ilayer+1)*Mx-1-i]=0;
 	ub[ilayer*Mx+i]=0;
@@ -815,30 +827,26 @@ int main(int argc, char **argv)
 
   }
 
+
+
+
+
+  ///Job 3 Printing
+
   if(Job==3){
 
+    /*
     metasurface(DegFree,epsopt,grad,&meta1);
     OutputVec(PETSC_COMM_WORLD,meta1.x,"exmField1",".m");
     metasurface(DegFree,epsopt,grad,&meta2);
     OutputVec(PETSC_COMM_WORLD,meta2.x,"exmField2",".m");
     metasurface(DegFree,epsopt,grad,&meta3);
     OutputVec(PETSC_COMM_WORLD,meta3.x,"exmField3",".m");
+    */
     metasurface(DegFree,epsopt,grad,&meta4);
     OutputVec(PETSC_COMM_WORLD,meta4.x,"exmField4",".m");
     metasurface(DegFree,epsopt,grad,&meta5);
     OutputVec(PETSC_COMM_WORLD,meta5.x,"exmField5",".m");
-
-    double *tmpepsopt;
-    tmpepsopt = (double *) malloc(DegFree*sizeof(double));
-    for (i=0;i<DegFree;i++){
-      tmpepsopt[i]=0;
-	};
-    metasurface(DegFree,tmpepsopt,grad,&meta1);
-    OutputVec(PETSC_COMM_WORLD,meta1.x,"refField1",".m");
-    metasurface(DegFree,tmpepsopt,grad,&meta2);
-    OutputVec(PETSC_COMM_WORLD,meta2.x,"refField2",".m");
-    metasurface(DegFree,tmpepsopt,grad,&meta3);
-    OutputVec(PETSC_COMM_WORLD,meta3.x,"refField3",".m");
 
     Vec eps1Full, eps2Full, eps3Full, eps4Full, eps5Full;
     VecDuplicate(vR,&eps1Full);
@@ -882,11 +890,38 @@ int main(int argc, char **argv)
     VecDestroy(&eps4Full);
     VecDestroy(&eps5Full);
 
-
     OutputVec(PETSC_COMM_WORLD,J1,"J",".m");
     OutputVec(PETSC_COMM_WORLD,VecPt,"VecPt",".m");
-         
+
+    double *tmpepsopt;
+    tmpepsopt = (double *) malloc(DegFree*sizeof(double));
+    for (i=0;i<DegFree;i++){
+      tmpepsopt[i]=0;
+    };
+    metasurface(DegFree,tmpepsopt,grad,&meta1);
+    OutputVec(PETSC_COMM_WORLD,meta1.x,"refField1",".m");
+    metasurface(DegFree,tmpepsopt,grad,&meta2);
+    OutputVec(PETSC_COMM_WORLD,meta2.x,"refField2",".m");
+    metasurface(DegFree,tmpepsopt,grad,&meta3);
+    OutputVec(PETSC_COMM_WORLD,meta3.x,"refField3",".m");
+
+
+
   }
+
+
+
+
+
+
+
+
+
+
+
+
+  ///Job 3 Printing Done
+
 
   if(Job==4){
 

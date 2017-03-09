@@ -1,4 +1,4 @@
-all: metasurfexec metasurf2exec metasurf3exec metasurf4exec metasurf5exec makegeomexec optexec sixmodes_exec c4vopt_exec EPopt_exec solver_exec fiber_exec blochdirac_exec degen_exec c4voptvar_exec penalty_exec penalty2_exec penalty3_exec penalty4_exec c3vopt_exec c3vsolver_exec chiralopt_exec chiraloptmaxmin_exec sweepldos_exec sweepfreq_exec sfg_exec sfgGeneral_exec graphene_exec test_exec sfgGenerallayered_exec Qopt_exec
+all: metasurfexec metasurf2exec metasurf3exec metasurf4exec metasurf5exec metasurf6exec metasurf7exec makegeomexec optexec sixmodes_exec c4vopt_exec EPopt_exec solver_exec fiber_exec blochdirac_exec degen_exec c4voptvar_exec penalty_exec penalty2_exec penalty3_exec penalty4_exec c3vopt_exec c3vsolver_exec chiralopt_exec chiraloptmaxmin_exec sweepldos_exec sweepfreq_exec sfg_exec sfgGeneral_exec graphene_exec test_exec sfgGenerallayered_exec Qopt_exec sweepfreq2_exec batchmetaopt_exec
 
 export PETSC_DIR=/opt/local/petsc-3.6.3
 export PETSC_ARCH=arch-opt
@@ -7,7 +7,7 @@ export NloptLibPath=/usr/local/lib/
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
-CLEANFILES = metasurf.o metasurf2.o metasurf3.o metasurf4.o metasurf5.o makegeom.o opt.o sixldos.o c4vopt.o EPopt.o solver.o fiber.o blochdirac.o degen.o c4voptvar.o penalty.o penalty2.o penalty3.o penalty4.o c3vopt.o c3vsolver.o chiralopt.o chiraloptmaxmin.o sweepldos.o sweepfreq.o sfg.o sfgGeneral.o graphene.o test.o sfgGenerallayered.o Qopt.o
+CLEANFILES = metasurf.o metasurf2.o metasurf3.o metasurf4.o metasurf5.o metasurf6.o metasurf7.o makegeom.o opt.o sixldos.o c4vopt.o EPopt.o solver.o fiber.o blochdirac.o degen.o c4voptvar.o penalty.o penalty2.o penalty3.o penalty4.o c3vopt.o c3vsolver.o chiralopt.o chiraloptmaxmin.o sweepldos.o sweepfreq.o sfg.o sfgGeneral.o graphene.o test.o sfgGenerallayered.o Qopt.o sweepfreq2.o batchmetaopt.o
 
 metasurfexec: metasurf.o 
 	$(CLINKER) metasurf.o -o metasurfexec ${NloptLibPath}/libnlopt.a ${CavityLibPath}/libOPT.a $(PETSC_LIB)
@@ -33,6 +33,16 @@ metasurf5exec: metasurf5.o
 	$(CLINKER) metasurf5.o -o metasurf5exec ${NloptLibPath}/libnlopt.a ${CavityLibPath}/libOPT.a $(PETSC_LIB)
 metasurf5: metasurf5.o
 	$(CLINKER) -Wall -g -o $@ metasurf5.o 
+
+metasurf6exec: metasurf6.o 
+	$(CLINKER) metasurf6.o -o metasurf6exec ${NloptLibPath}/libnlopt.a ${CavityLibPath}/libOPT.a $(PETSC_LIB)
+metasurf6: metasurf6.o
+	$(CLINKER) -Wall -g -o $@ metasurf6.o 
+
+metasurf7exec: metasurf7.o 
+	$(CLINKER) metasurf7.o -o metasurf7exec ${NloptLibPath}/libnlopt.a ${CavityLibPath}/libOPT.a $(PETSC_LIB)
+metasurf7: metasurf7.o
+	$(CLINKER) -Wall -g -o $@ metasurf7.o 
 
 makegeomexec: makegeom.o 
 	$(CLINKER) makegeom.o -o makegeomexec ${NloptLibPath}/libnlopt.a ${CavityLibPath}/libOPT.a $(PETSC_LIB)
@@ -163,3 +173,13 @@ Qopt_exec: Qopt.o
 	$(CLINKER) Qopt.o -o Qopt_exec ${NloptLibPath}/libnlopt.a ${CavityLibPath}/libOPT.a $(PETSC_LIB)
 Qopt: Qopt.o
 	$(CLINKER) -Wall -g -o $@ Qopt.o 
+
+sweepfreq2_exec: sweepfreq2.o
+	$(CLINKER) sweepfreq2.o -o sweepfreq2_exec ${NloptLibPath}/libnlopt.a ${CavityLibPath}/libOPT.a $(PETSC_LIB)
+sweepfreq2: sweepfreq2.o
+	$(CLINKER) -Wall -g -o $@ sweepfreq2.o 
+
+batchmetaopt_exec: batchmetaopt.o
+	$(CLINKER) batchmetaopt.o -o batchmetaopt_exec ${NloptLibPath}/libnlopt.a ${CavityLibPath}/libOPT.a $(PETSC_LIB)
+batchmetaopt: batchmetaopt.o
+	$(CLINKER) -Wall -g -o $@ batchmetaopt.o 

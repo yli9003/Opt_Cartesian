@@ -333,6 +333,28 @@ typedef struct{
   char *filenameComm;
 } MetaSurfGroup;
 
+typedef struct{
+  int Nx;
+  int Ny;
+  int Nz;
+  Vec epsSReal;
+  Vec epsFReal;
+  double omega;
+  Mat M;
+  Mat A;
+  Vec b;
+  Vec x;
+  Vec epspmlQ;
+  Vec epsmedium;
+  Vec epsDiff;
+  Vec epscoef;
+  KSP ksp;
+  int *its;
+  Vec pvec;
+  Vec qvec;
+  int outputbase;
+} Meta;
+
 // from initialize.c
 PetscErrorCode readfromflags(Universals *params);
 
@@ -561,6 +583,17 @@ double transmissionmeta(int DegFree,double *epsopt, double *grad, void *data);
 double transmissionmetaconstr(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
 
 double transmissionminimax(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
+
+// from batchmeta.c
+double batchmeta(int DegFree,double *epsopt, double *grad, void *data);
+
+PetscErrorCode makepq_delf(MPI_Comm comm, Vec *pout, Vec *qout, int Nx, int Ny, int Nz, int lx, int ux, int ly, int uy, int lz, int uz, int dir, double theta, double lambda, double refphi);
+
+PetscErrorCode makepq_delf(MPI_Comm comm, Vec *pout, Vec *qout, int Nx, int Ny, int Nz, int lx, int ux, int ly, int uy, int lz, int uz, int dir, double focallength, double lambda, double refphi);
+
+double batchmaximin(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
+
+double maximinobjfun(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
 
 // from metascatter.c
 double metascat(int DegFree,double *epsopt, double *grad, void *data);

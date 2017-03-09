@@ -712,11 +712,23 @@ int main(int argc, char **argv)
 
     }
     //make sure that the pixels near boundaries are fixed
-    int fixedendpts;
+    int *fixedendptsarray;
+    fixedendptsarray = (int *) malloc(nlayers*sizeof(int));
     int ilayer;
-    getint("-fixedendpts",&fixedendpts,5);
+    int fixedendpts;
+    getint("-fixedendpts",&fixedendpts,0);
+    if(fixedendpts==0){
+      for(ilayer=0;ilayer<nlayers;ilayer++){
+	sprintf(tmpflg,"-fixed[%d]",ilayer+1);
+	getint(tmpflg,fixedendptsarray+ilayer,0);
+      }
+    }else{
+      for(ilayer=0;ilayer<nlayers;ilayer++){
+	fixedendptsarray[ilayer]=fixedendpts;
+      }
+    }
     for(ilayer=0;ilayer<nlayers;ilayer++){
-      for(i=0;i<fixedendpts;i++){
+      for(i=0;i<fixedendptsarray[ilayer];i++){
 	lb[ilayer*Mx+i]=0;
 	lb[(ilayer+1)*Mx-1-i]=0;
 	ub[ilayer*Mx+i]=0;
@@ -747,46 +759,31 @@ int main(int argc, char **argv)
     getint("-nummodes",&nummodes,2);
     getreal("-mintrans",&mintrans,0);
     if(nummodes==1){
-      nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta1,1e-8);
-      if(mintrans>0) nlopt_add_inequality_constraint(opt,transmissionmetaconstr,&meta1,1e-8);
+      nlopt_add_inequality_constraint(opt,transmissionminimax,&meta1,1e-8);
     }else if(nummodes==2){
-      nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta1,1e-8);
-      if(mintrans>0) nlopt_add_inequality_constraint(opt,transmissionmetaconstr,&meta1,1e-8);
-      nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta2,1e-8);
-      if(mintrans>0) nlopt_add_inequality_constraint(opt,transmissionmetaconstr,&meta2,1e-8);
+      nlopt_add_inequality_constraint(opt,transmissionminimax,&meta1,1e-8);
+      nlopt_add_inequality_constraint(opt,transmissionminimax,&meta2,1e-8);
     }else if(nummodes==3){
-      nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta1,1e-8);
-      if(mintrans>0) nlopt_add_inequality_constraint(opt,transmissionmetaconstr,&meta1,1e-8);
-      nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta2,1e-8);
-      if(mintrans>0) nlopt_add_inequality_constraint(opt,transmissionmetaconstr,&meta2,1e-8);
-      nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta3,1e-8);
-      if(mintrans>0) nlopt_add_inequality_constraint(opt,transmissionmetaconstr,&meta3,1e-8);
+      nlopt_add_inequality_constraint(opt,transmissionminimax,&meta1,1e-8);
+      nlopt_add_inequality_constraint(opt,transmissionminimax,&meta2,1e-8);
+      nlopt_add_inequality_constraint(opt,transmissionminimax,&meta3,1e-8);
     }else if(nummodes==4){
-      nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta1,1e-8);
-      if(mintrans>0) nlopt_add_inequality_constraint(opt,transmissionmetaconstr,&meta1,1e-8);
-      nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta2,1e-8);
-      if(mintrans>0) nlopt_add_inequality_constraint(opt,transmissionmetaconstr,&meta2,1e-8);
-      nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta3,1e-8);
-      if(mintrans>0) nlopt_add_inequality_constraint(opt,transmissionmetaconstr,&meta3,1e-8);
-      nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta4,1e-8);
-      if(mintrans>0) nlopt_add_inequality_constraint(opt,transmissionmetaconstr,&meta4,1e-8);
+      nlopt_add_inequality_constraint(opt,transmissionminimax,&meta1,1e-8);
+      nlopt_add_inequality_constraint(opt,transmissionminimax,&meta2,1e-8);
+      nlopt_add_inequality_constraint(opt,transmissionminimax,&meta3,1e-8);
+      nlopt_add_inequality_constraint(opt,transmissionminimax,&meta4,1e-8);
     }else if(nummodes==5){
-      nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta1,1e-8);
-      if(mintrans>0) nlopt_add_inequality_constraint(opt,transmissionmetaconstr,&meta1,1e-8);
-      nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta2,1e-8);
-      if(mintrans>0) nlopt_add_inequality_constraint(opt,transmissionmetaconstr,&meta2,1e-8);
-      nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta3,1e-8);
-      if(mintrans>0) nlopt_add_inequality_constraint(opt,transmissionmetaconstr,&meta3,1e-8);
-      nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta4,1e-8);
-      if(mintrans>0) nlopt_add_inequality_constraint(opt,transmissionmetaconstr,&meta4,1e-8);
-      nlopt_add_inequality_constraint(opt,metasurfaceminimax,&meta5,1e-8);
-      if(mintrans>0) nlopt_add_inequality_constraint(opt,transmissionmetaconstr,&meta5,1e-8);
+      nlopt_add_inequality_constraint(opt,transmissionminimax,&meta1,1e-8);
+      nlopt_add_inequality_constraint(opt,transmissionminimax,&meta2,1e-8);
+      nlopt_add_inequality_constraint(opt,transmissionminimax,&meta3,1e-8);
+      nlopt_add_inequality_constraint(opt,transmissionminimax,&meta4,1e-8);
+      nlopt_add_inequality_constraint(opt,transmissionminimax,&meta5,1e-8);
     }else{
       PetscPrintf(PETSC_COMM_WORLD,"Supply nummodes between 1 to 5 \n");
     }     
 
     if(frac<1.0) nlopt_add_inequality_constraint(opt,pfunc,&frac,1e-8);
-    nlopt_set_max_objective(opt,minimaxobjfun,NULL);   
+    nlopt_set_min_objective(opt,minimaxobjfun,NULL);   
     
     result = nlopt_optimize(opt,epsoptAll,&maxf);
 
@@ -815,6 +812,12 @@ int main(int argc, char **argv)
 
   }
 
+
+
+
+
+  ///Job 3 Printing
+
   if(Job==3){
 
     metasurface(DegFree,epsopt,grad,&meta1);
@@ -827,18 +830,6 @@ int main(int argc, char **argv)
     OutputVec(PETSC_COMM_WORLD,meta4.x,"exmField4",".m");
     metasurface(DegFree,epsopt,grad,&meta5);
     OutputVec(PETSC_COMM_WORLD,meta5.x,"exmField5",".m");
-
-    double *tmpepsopt;
-    tmpepsopt = (double *) malloc(DegFree*sizeof(double));
-    for (i=0;i<DegFree;i++){
-      tmpepsopt[i]=0;
-	};
-    metasurface(DegFree,tmpepsopt,grad,&meta1);
-    OutputVec(PETSC_COMM_WORLD,meta1.x,"refField1",".m");
-    metasurface(DegFree,tmpepsopt,grad,&meta2);
-    OutputVec(PETSC_COMM_WORLD,meta2.x,"refField2",".m");
-    metasurface(DegFree,tmpepsopt,grad,&meta3);
-    OutputVec(PETSC_COMM_WORLD,meta3.x,"refField3",".m");
 
     Vec eps1Full, eps2Full, eps3Full, eps4Full, eps5Full;
     VecDuplicate(vR,&eps1Full);
@@ -882,11 +873,38 @@ int main(int argc, char **argv)
     VecDestroy(&eps4Full);
     VecDestroy(&eps5Full);
 
-
     OutputVec(PETSC_COMM_WORLD,J1,"J",".m");
     OutputVec(PETSC_COMM_WORLD,VecPt,"VecPt",".m");
-         
+
+    double *tmpepsopt;
+    tmpepsopt = (double *) malloc(DegFree*sizeof(double));
+    for (i=0;i<DegFree;i++){
+      tmpepsopt[i]=0;
+    };
+    metasurface(DegFree,tmpepsopt,grad,&meta1);
+    OutputVec(PETSC_COMM_WORLD,meta1.x,"refField1",".m");
+    metasurface(DegFree,tmpepsopt,grad,&meta2);
+    OutputVec(PETSC_COMM_WORLD,meta2.x,"refField2",".m");
+    metasurface(DegFree,tmpepsopt,grad,&meta3);
+    OutputVec(PETSC_COMM_WORLD,meta3.x,"refField3",".m");
+
+
+
   }
+
+
+
+
+
+
+
+
+
+
+
+
+  ///Job 3 Printing Done
+
 
   if(Job==4){
 
