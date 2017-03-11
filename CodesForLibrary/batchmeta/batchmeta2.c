@@ -80,6 +80,14 @@ double batchmeta(int DegFree,double *epsopt, double *grad, void *data)
 
   // solve the two fundamental modes and their ldos
   SolveMatrix(PETSC_COMM_WORLD,ksp,Mtmp,b,x,its);
+  
+  /*
+  OutputMat(PETSC_COMM_WORLD,M,"M",".m");
+  OutputMat(PETSC_COMM_WORLD,Mtmp,"Mtmp",".m");
+  OutputVec(PETSC_COMM_WORLD,epsDiff,"epsDiff",".m");
+  OutputVec(PETSC_COMM_WORLD,b,"b",".m");
+  OutputVec(PETSC_COMM_WORLD,x,"x",".m");
+  */
 
   //Note: 
   //everything is vector field; PointwiseMult cannot be used except for vR.
@@ -183,18 +191,17 @@ double batchmeta(int DegFree,double *epsopt, double *grad, void *data)
 
 #undef __FUNCT__ 
 #define __FUNCT__ "makepq_defl"
-PetscErrorCode makepq_delf(MPI_Comm comm, Vec *pout, Vec *qout, int Nx, int Ny, int Nz, int lx, int ux, int ly, int uy, int lz, int uz, int dir, double theta, double lambda, double refphi)
+PetscErrorCode makepq_defl(MPI_Comm comm, Vec *pout, Vec *qout, int Nx, int Ny, int Nz, int lx, int ux, int ly, int uy, int lz, int uz, int dir, double theta, double lambda, double refphi)
 {
   int i, j, k, pos, N;
   N = Nx*Ny*Nz;
 
   Vec pvec, qvec, qvecconj;
   PetscErrorCode ierr;
-  ierr = VecCreate(comm,&pvec);CHKERRQ(ierr);
-  ierr = VecSetSizes(pvec,PETSC_DECIDE,6*N);CHKERRQ(ierr);
-  VecSet(pvec,0.0);
-  VecDuplicate(pvec,&qvec);
-  VecDuplicate(pvec,&qvecconj);
+  ierr = VecCreate(comm,&qvec);CHKERRQ(ierr);
+  ierr = VecSetSizes(qvec,PETSC_DECIDE,6*N);CHKERRQ(ierr);
+  ierr = VecSetFromOptions(qvec); CHKERRQ(ierr);
+  VecSet(qvec,0.0);
 
   int ns, ne;
   ierr = VecGetOwnershipRange(qvec, &ns, &ne); CHKERRQ(ierr);
@@ -231,7 +238,9 @@ PetscErrorCode makepq_delf(MPI_Comm comm, Vec *pout, Vec *qout, int Nx, int Ny, 
       }
   VecAssemblyBegin(qvec);
   VecAssemblyEnd(qvec); 
-  
+
+  VecDuplicate(qvec,&pvec);
+  VecDuplicate(qvec,&qvecconj);
   MatMult(C,qvec,qvecconj);
   CmpVecProd(qvec,qvecconj,pvec);
   VecPointwiseMult(pvec,pvec,vR);
@@ -252,22 +261,23 @@ PetscErrorCode makepq_delf(MPI_Comm comm, Vec *pout, Vec *qout, int Nx, int Ny, 
 #define __FUNCT__ "makepq_lens"
 PetscErrorCode makepq_lens(MPI_Comm comm, Vec *pout, Vec *qout, int Nx, int Ny, int Nz, int lx, int ux, int ly, int uy, int lz, int uz, int dir, double focallength, double lambda, double refphi)
 {
+
   int i, j, k, pos, N;
   N = Nx*Ny*Nz;
 
   Vec pvec, qvec, qvecconj;
   PetscErrorCode ierr;
-  ierr = VecCreate(comm,&pvec);CHKERRQ(ierr);
-  ierr = VecSetSizes(pvec,PETSC_DECIDE,6*N);CHKERRQ(ierr);
-  VecSet(pvec,0.0);
-  VecDuplicate(pvec,&qvec);
-  VecDuplicate(pvec,&qvecconj);
+  ierr = VecCreate(comm,&qvec);CHKERRQ(ierr);
+  ierr = VecSetSizes(qvec,PETSC_DECIDE,6*N);CHKERRQ(ierr);
+  ierr = VecSetFromOptions(qvec); CHKERRQ(ierr);
 
+  VecSet(qvec,0.0);
+  
   int ns, ne;
   ierr = VecGetOwnershipRange(qvec, &ns, &ne); CHKERRQ(ierr);
 
   double dl, phi, ampr, ampi;
-  
+
   for (i=0;i<Nx;i++)
     if ((i>=lx) && (i<ux))
       {for (j=0; j<Ny;j++)
@@ -298,12 +308,16 @@ PetscErrorCode makepq_lens(MPI_Comm comm, Vec *pout, Vec *qout, int Nx, int Ny, 
       }
   VecAssemblyBegin(qvec);
   VecAssemblyEnd(qvec); 
-  
+
+  VecDuplicate(qvec,&pvec);
+  VecDuplicate(qvec,&qvecconj);
   MatMult(C,qvec,qvecconj);
   CmpVecProd(qvec,qvecconj,pvec);
   VecPointwiseMult(pvec,pvec,vR);
 
   VecDestroy(&qvecconj);
+
+
 
   *qout = qvec;
   *pout = pvec;

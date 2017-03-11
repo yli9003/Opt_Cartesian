@@ -104,6 +104,15 @@ int main(int argc, char **argv)
   getreal("-jlz",&jlz,Npmlz*hz+1/5);
   getreal("-juz",&juz,jlz+hz);
 
+  //same measurement / opt plance for all currents
+  int rlx, rux, rly, ruy, rlz, ruz;
+  getint("-rlx",&rlx,0);
+  getint("-rux",&rux,Nx);
+  getint("-rly",&rly,0);
+  getint("-ruy",&ruy,Ny);
+  getint("-rlz",&rlz,Nz-Npmlz-5);
+  getint("-ruz",&ruz,rlz+1);
+
   double Qabs;
   getreal("-Qabs",&Qabs,1e16);
   if (Qabs>1e15) Qabs=1.0/0.0;
@@ -131,7 +140,10 @@ int main(int argc, char **argv)
   int nlayers;
   int i;
   char tmpflg[PETSC_MAX_PATH_LEN];
-  int Mz[nlayers], Nzo[nlayers];
+  int *Mz, *Nzo;
+  Mz=(int *) malloc(nlayers*sizeof(int));
+  Nzo=(int *) malloc(nlayers*sizeof(int));
+
   getint("-nlayers",&nlayers,1);
   DegFree=0;
   for(i=0;i<nlayers;i++){
@@ -147,7 +159,6 @@ int main(int argc, char **argv)
 
   int j;
   double tmp;
-  double metaphase[nfreq];
   double betax[nfreq], betay[nfreq], betaz[nfreq];
   double epsdiff[nfreq][nlayers], epsbkg[nfreq][nlayers];
   double epssub[nfreq], epsair[nfreq], epsmid[nfreq];
@@ -156,11 +167,9 @@ int main(int argc, char **argv)
   int bxu[nfreq], byu[nfreq], bzu[nfreq];
   int Jdir[nfreq];
   double freq[nfreq], omega[nfreq], Jmag[nfreq];
+  int device[i];
 
   for(i=0;i<nfreq;i++){
-
-    sprintf(tmpflg,"-metaphase[%d]",i+1);
-    getreal(tmpflg,metaphase+i,0);
 
     sprintf(tmpflg,"-betax[%d]",i+1);
     getreal(tmpflg,betax+i,0);
@@ -170,17 +179,17 @@ int main(int argc, char **argv)
     getreal(tmpflg,betaz+i,0);
 
     sprintf(tmpflg,"-epssub[%d]",i+1);
-    getreal(tmpflg,epssub+1,2);
+    getreal(tmpflg,epssub+i,2);
     sprintf(tmpflg,"-epsair[%d]",i+1);
-    getreal(tmpflg,epsair+1,2);
+    getreal(tmpflg,epsair+i,2);
     sprintf(tmpflg,"-epsmid[%d]",i+1);
-    getreal(tmpflg,epsmid+1,2);
+    getreal(tmpflg,epsmid+i,2);
     sprintf(tmpflg,"-epssubdiff[%d]",i+1);
-    getreal(tmpflg,epssubdiff+1,0);
+    getreal(tmpflg,epssubdiff+i,0);
     sprintf(tmpflg,"-epsairdiff[%d]",i+1);
-    getreal(tmpflg,epsairdiff+1,0);
+    getreal(tmpflg,epsairdiff+i,0);
     sprintf(tmpflg,"-epsmiddiff[%d]",i+1);
-    getreal(tmpflg,epsmiddiff+1,0);
+    getreal(tmpflg,epsmiddiff+i,0);
     
     for(j=0;j<nlayers;j++){
       sprintf(tmpflg,"-epsdiff[%d][%d]",i+1,j+1);
@@ -211,6 +220,9 @@ int main(int argc, char **argv)
     omega[i]=2*PI*freq[i];
     sprintf(tmpflg,"-Jmag[%d]",i+1);
     getreal(tmpflg,Jmag+i,1);
+
+    sprintf(tmpflg,"-device[%d]",i+1);
+    getint(tmpflg,device+i,0);          //device to optimize 0 beam deflector, 1 lens, 2 hologram, etc; device parameters will be asked below
 
   }
 
@@ -277,10 +289,14 @@ int main(int argc, char **argv)
   KSP ksp[nfreq];
   PC pc[nfreq];
   int its[nfreq];
-  Meta data[nfreq]; 
+  Meta data[nfreq];
+  int devicedir;
+  double refphi, theta, focallength;
+  double *tmpeps;
+  tmpeps=(double *) malloc(nlayers*sizeof(double));
   for(i=0;i<nfreq;i++){
     MuinvPMLGeneral(PETSC_COMM_SELF, muinvpml+i, Nx,Ny,Nz,Npmlx,Npmly,Npmlz,sigmax,sigmay,sigmaz,omega[i],LowerPMLx,LowerPMLy,LowerPMLz);
-    VecToArray(muinvpml[i],muinv,scatter,from,to,vgradlocal,6*Nxyz);
+    AddMuAbsorption(muinv,muinvpml[i],Qabs,1);
     tmpbx[0]=bxl[i];
     tmpbx[1]=bxu[i];
     tmpby[0]=byl[i];
@@ -293,11 +309,19 @@ int main(int argc, char **argv)
     MoperatorGeneralBloch(PETSC_COMM_WORLD, M+i, Nx,Ny,Nz, hx,hy,hz, tmpbx,tmpby,tmpbz, muinv, BCPeriod, tmpbeta);
 
     VecDuplicate(vR,epsVec+i);
+    for(j=0;j<nlayers;j++){
+      tmpeps[j]=epsdiff[i][j];
+    }
     VecSet(epsVec[i],0.0);
-    layeredepsdiff(epsVec[i],Nx,Ny,Nz, nlayers,Nzo,Mz, epsdiff[i], epssubdiff[i], epsairdiff[i], epsmiddiff[i]);
+    layeredepsdiff(epsVec[i],Nx,Ny,Nz, nlayers,Nzo,Mz, tmpeps, epssubdiff[i], epsairdiff[i], epsmiddiff[i]);
+    
     VecDuplicate(vR,epsmedium+i);
+    for(j=0;j<nlayers;j++){
+      tmpeps[j]=epsbkg[i][j];
+    }
     VecSet(epsmedium[i],0.0);
-    layeredepsbkg(epsmedium[i],Nx,Ny,Nz, nlayers,Nzo,Mz, epsbkg[i], epssub[i], epsair[i], epsmid[i]);
+    layeredepsbkg(epsmedium[i],Nx,Ny,Nz, nlayers,Nzo,Mz, tmpeps, epssub[i], epsair[i], epsmid[i]);
+    
     VecDuplicate(vR,epspmlQ+i);
     VecDuplicate(vR,epscoef+i);
     EpsPMLGeneral(PETSC_COMM_WORLD, epspml,Nx,Ny,Nz,Npmlx,Npmly,Npmlz,sigmax,sigmay,sigmaz,omega[i], LowerPMLx,LowerPMLy,LowerPMLz);
@@ -312,9 +336,26 @@ int main(int argc, char **argv)
     VecPointwiseMult(weightedJ[i],J[i],weight);
     VecDuplicate(vR,x+i);
 
-    VecDuplicate(vR,pvec+i);
-    VecDuplicate(vR,qvec+i);
     //TODO: MAKE PHASE VECTOR FOR LENS OR BEAM DEFLECTOR
+    sprintf(tmpflg,"-devicedir[%d]",i+1);
+    getint(tmpflg,&devicedir,1);
+    sprintf(tmpflg,"-refphi[%d]",i+1);
+    getreal(tmpflg,&refphi,0);
+    if(device[i]==0){
+      
+      sprintf(tmpflg,"-theta[%d]",i+1);
+      getreal(tmpflg,&theta,0);
+      makepq_defl(PETSC_COMM_WORLD,pvec+i,qvec+i, Nx,Ny,Nz, rlx,rux,rly,ruy,rlz,ruz, devicedir, theta,1/(freq[i]*hz),refphi);
+    
+    }else if(device[i]==1){
+ 
+      sprintf(tmpflg,"-focallength[%d]",i+1);
+      getreal(tmpflg,&focallength,0);
+      makepq_lens(PETSC_COMM_WORLD,pvec+i,qvec+i, Nx,Ny,Nz, rlx,rux,rly,ruy,rlz,ruz, devicedir, focallength,1/(freq[i]*hz),refphi);
+
+    }else{
+      PetscPrintf(PETSC_COMM_WORLD,"ERROR: Provide device 0 beam deflector or 1 lens. \n");
+    }
 
     setupKSP(PETSC_COMM_WORLD,ksp+i,pc+i,solver,iteronly);
     its[i]=100;
@@ -377,8 +418,8 @@ int main(int argc, char **argv)
     int ifreq;
     getint("-posMj",&posMj,0);
     getreal("-s1",&s1,0);
-    getreal("-s2",&s2,1);
     getreal("-ds",&ds,0.01);
+    getreal("-s2",&s2,1.0);
     getint("-ifreq",&ifreq,0);
     for (epscen=s1;epscen<s2;epscen+=ds)
       {
@@ -386,7 +427,7 @@ int main(int argc, char **argv)
         beta = batchmeta(DegFree,epsopt,grad,data+ifreq);
         PetscPrintf(PETSC_COMM_WORLD,"epscen: %g objfunc: %g objfunc-grad: %g \n", epsopt[posMj], beta, grad[posMj]);
       }
-
+    
   }
 
 /*------------------------------------------------*/

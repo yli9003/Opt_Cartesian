@@ -587,9 +587,9 @@ double transmissionminimax(int DegFreeAll,double *epsoptAll, double *gradAll, vo
 // from batchmeta.c
 double batchmeta(int DegFree,double *epsopt, double *grad, void *data);
 
-PetscErrorCode makepq_delf(MPI_Comm comm, Vec *pout, Vec *qout, int Nx, int Ny, int Nz, int lx, int ux, int ly, int uy, int lz, int uz, int dir, double theta, double lambda, double refphi);
+PetscErrorCode makepq_defl(MPI_Comm comm, Vec *pout, Vec *qout, int Nx, int Ny, int Nz, int lx, int ux, int ly, int uy, int lz, int uz, int dir, double theta, double lambda, double refphi);
 
-PetscErrorCode makepq_delf(MPI_Comm comm, Vec *pout, Vec *qout, int Nx, int Ny, int Nz, int lx, int ux, int ly, int uy, int lz, int uz, int dir, double focallength, double lambda, double refphi);
+PetscErrorCode makepq_lens(MPI_Comm comm, Vec *pout, Vec *qout, int Nx, int Ny, int Nz, int lx, int ux, int ly, int uy, int lz, int uz, int dir, double focallength, double lambda, double refphi);
 
 double batchmaximin(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
 
