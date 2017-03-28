@@ -30,6 +30,7 @@ PetscErrorCode SourceAngled(MPI_Comm comm, Vec *bout, int Nx, int Ny, int Nz, do
   int ns, ne;
   ierr = VecGetOwnershipRange(b, &ns, &ne); CHKERRQ(ierr);
 
+  double preal,pimag;
 
   for (i=0;i<Nx;i++)
     if ((i*hx>=lx) && (i*hx<ux))
@@ -61,7 +62,7 @@ PetscErrorCode SourceAngled(MPI_Comm comm, Vec *bout, int Nx, int Ny, int Nz, do
 
 #undef __FUNCT__ 
 #define __FUNCT__ "makepq_lens_inc"
-PetscErrorCode makepq_lens_inc(MPI_Comm comm, Vec *pout, Vec *qout, int Nx, int Ny, int Nz, int lx, int ux, int ly, int uy, int lz, int uz, int dir, double focallength, double lambda, double refphi)
+PetscErrorCode makepq_lens_inc(MPI_Comm comm, Vec *pout, Vec *qout, int Nx, int Ny, int Nz, int lx, int ux, int ly, int uy, int lz, int uz, int dir, double fcl, double theta_inc, double lambda, double refphi, int ix0, int iy0, int iz0)
 {
 
   int i, j, k, pos, N;
@@ -86,8 +87,8 @@ PetscErrorCode makepq_lens_inc(MPI_Comm comm, Vec *pout, Vec *qout, int Nx, int 
 			{pos = i*Ny*Nz + j*Nz + k;
 			  if ( ns < pos+dir*N+1 && ne > pos+dir*N){
 			    PetscPrintf(comm,"DEBUG: I AM HERE IN makepq_lens.\n");
- 			    dl=((ux-lx>1)*(i-lx) + (uy-ly>1)*(j-ly) + (uz-lz>1)*(k-lz));
-			    phi = refphi - (2*PI/lambda) * (sqrt(dl*dl + focallength*focallength)-focallength);
+ 			    dl=((ux-lx>1)*(i-ix0) + (uy-ly>1)*(j-iy0) + (uz-lz>1)*(k-iz0));
+			    phi = refphi - (2*PI/lambda) * (sqrt(pow(fcl*tan(theta_inc)-dl,2)+pow(fcl,2))-(fcl/cos(theta_inc)));
 			    ampr=cos(phi);
 			    ampi=sin(phi);
 			    PetscPrintf(comm,"DEBUG: ampr %g, ampi %g \n",ampr,ampi);
@@ -124,3 +125,101 @@ PetscErrorCode makepq_lens_inc(MPI_Comm comm, Vec *pout, Vec *qout, int Nx, int 
   PetscFunctionReturn(0);
   
 }
+
+#undef __FUNCT__
+#define __FUNCT__ "mirrorA1d"
+PetscErrorCode mirrorA1d(MPI_Comm comm, Mat *Aout, int Mx, int nlayers)
+{
+
+  PetscPrintf(comm,"WARNING: mirrorA1d only works with Mzslab = 1.\n");
+
+  Mat A;
+  int nz = 1; /* max # nonzero elements in each row */
+  PetscErrorCode ierr;
+  int ns, ne;
+  int i;
+
+  int nrows=(2*Mx-1)*nlayers;
+  int ncols=Mx*nlayers;
+
+  MatCreate(comm, &A);
+  MatSetType(A,MATMPIAIJ);
+  MatSetSizes(A,PETSC_DECIDE, PETSC_DECIDE, nrows, ncols);
+  MatMPIAIJSetPreallocation(A, nz, PETSC_NULL, nz, PETSC_NULL);
+
+  ierr = MatGetOwnershipRange(A, &ns, &ne); CHKERRQ(ierr);
+
+  int ilayer,j,id,iid;
+  for (i = ns; i < ne; ++i) {
+
+    ilayer=(int) i/(2*Mx-1);
+    j=i % (2*Mx-1);
+    id=abs(j-(Mx-1));
+    iid=id+ilayer*Mx;
+    ierr = MatSetValue(A, i, iid, 1.0, INSERT_VALUES); CHKERRQ(ierr);
+
+  }
+
+  ierr = MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+  ierr = MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+
+  ierr = PetscObjectSetName((PetscObject) A,"MirrorMat"); CHKERRQ(ierr);
+  *Aout = A;
+  PetscFunctionReturn(0);
+}
+
+
+#undef __FUNCT__
+#define __FUNCT__ "mirrorA2d"
+PetscErrorCode mirrorA2d(MPI_Comm comm, Mat *Aout, int Mx, int My, int nlayers)
+{
+
+  PetscPrintf(comm,"WARNING: mirrorA2d only works with Mzslab = 0 and same My for all layers.\n");
+
+  Mat A;
+  int nz = 1; /* max # nonzero elements in each row */
+  PetscErrorCode ierr;
+  int ns, ne;
+  int i;
+  
+  int nx,ny,nxy;
+  nx=2*Mx-1;
+  ny=My;
+  nxy=nx*ny;
+  int nrows=nxy*nlayers;
+  int ncols=Mx*My*nlayers;
+
+  MatCreate(comm, &A);
+  MatSetType(A,MATMPIAIJ);
+  MatSetSizes(A,PETSC_DECIDE, PETSC_DECIDE, nrows, ncols);
+  MatMPIAIJSetPreallocation(A, nz, PETSC_NULL, nz, PETSC_NULL);
+
+  ierr = MatGetOwnershipRange(A, &ns, &ne); CHKERRQ(ierr);
+
+
+
+  int ilayer,j,jx,jy,idx,idy,id,iid;
+  for (i = ns; i < ne; ++i) {
+
+    ilayer=(int) i/nxy;
+    j=i % nxy;
+
+    jy = j % ny;
+    jx = (j /= ny) % nx;
+    
+    idy=jy;
+    idx=abs(jx-(Mx-1));
+    id=idx*My+idy;
+    iid=id+ilayer*Mx*My;
+    ierr = MatSetValue(A, i, iid, 1.0, INSERT_VALUES); CHKERRQ(ierr);
+
+  }
+
+  ierr = MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+  ierr = MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+
+  ierr = PetscObjectSetName((PetscObject) A,"MirrorMat"); CHKERRQ(ierr);
+  *Aout = A;
+  PetscFunctionReturn(0);
+}
+

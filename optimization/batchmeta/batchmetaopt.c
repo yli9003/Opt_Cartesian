@@ -25,10 +25,13 @@ int itsH;
 double mintrans;
 
 /*------------------------------------------------------*/
-
+double printfile(Vec x, const char *name, int N);
 PetscErrorCode setupKSP(MPI_Comm comm, KSP *ksp, PC *pc, int solver, int iteronly);
 double pfunc_constr(int DegFree, double *epsopt, double *grad, void *data);
 double pfunc_noconstr(int DegFree, double *epsopt, double *grad, void *data);
+double optimize_refphi(double phi0, int DegFree, double *epsopt, void *data, int alg, int localalg, int maxeval, int maxtime, double *lphi, double *uphi);
+double optimize_eps(int DegFree, double *epsopt, void *data, int alg, int localalg, int maxeval, int maxtime);
+double optimize_freqmaximin(int DegFree, double *epsopt, void *data, int alg, int localalg, int maxeval, int maxtime, int nmodes, double initdummy);
 
 #undef __FUNCT__ 
 #define __FUNCT__ "main" 
@@ -137,14 +140,20 @@ int main(int argc, char **argv)
   getint("-readlubsfromfile",&readlubsfromfile,0);
 
   /**********************************************/
-  int nlayers;
+  int tmpnlayers;
+  getint("-nlayers",&tmpnlayers,1);
+  const int nlayers=tmpnlayers;
+
+  int tmpnfreq;
+  getint("-nfreq",&tmpnfreq,1);
+  const int nfreq=tmpnfreq;
+
   int i;
   char tmpflg[PETSC_MAX_PATH_LEN];
   int *Mz, *Nzo;
   Mz=(int *) malloc(nlayers*sizeof(int));
   Nzo=(int *) malloc(nlayers*sizeof(int));
 
-  getint("-nlayers",&nlayers,1);
   DegFree=0;
   for(i=0;i<nlayers;i++){
     sprintf(tmpflg,"-Mz[%d]",i+1);
@@ -153,9 +162,6 @@ int main(int argc, char **argv)
     getint(tmpflg,Nzo+i,LowerPMLz*(Nz-Mz[i])/2);
     DegFree=DegFree+Mx*My*((Mzslab==0)?Mz[i]:1);
   }
-
-  int nfreq;
-  getint("-nfreq",&nfreq,1);
 
   int j;
   double tmp;
@@ -167,7 +173,7 @@ int main(int argc, char **argv)
   int bxu[nfreq], byu[nfreq], bzu[nfreq];
   int Jdir[nfreq];
   double freq[nfreq], omega[nfreq], Jmag[nfreq];
-  int device[i];
+  int device[nfreq];
 
   for(i=0;i<nfreq;i++){
 
@@ -290,8 +296,8 @@ int main(int argc, char **argv)
   PC pc[nfreq];
   int its[nfreq];
   Meta data[nfreq];
-  int devicedir;
-  double refphi, theta, focallength;
+  int devicedir[nfreq];
+  double refphi[nfreq], theta[nfreq], focallength[nfreq];
   double *tmpeps;
   tmpeps=(double *) malloc(nlayers*sizeof(double));
   for(i=0;i<nfreq;i++){
@@ -338,20 +344,20 @@ int main(int argc, char **argv)
 
     //TODO: MAKE PHASE VECTOR FOR LENS OR BEAM DEFLECTOR
     sprintf(tmpflg,"-devicedir[%d]",i+1);
-    getint(tmpflg,&devicedir,1);
+    getint(tmpflg,devicedir+i,1);
     sprintf(tmpflg,"-refphi[%d]",i+1);
-    getreal(tmpflg,&refphi,0);
+    getreal(tmpflg,refphi+i,0);
     if(device[i]==0){
       
       sprintf(tmpflg,"-theta[%d]",i+1);
-      getreal(tmpflg,&theta,0);
-      makepq_defl(PETSC_COMM_WORLD,pvec+i,qvec+i, Nx,Ny,Nz, rlx,rux,rly,ruy,rlz,ruz, devicedir, theta,1/(freq[i]*hz),refphi);
+      getreal(tmpflg,theta+i,0);
+      makepq_defl(PETSC_COMM_WORLD,pvec+i,qvec+i, Nx,Ny,Nz, rlx,rux,rly,ruy,rlz,ruz, devicedir[i], theta[i],1/(freq[i]*hz),refphi[i]);
     
     }else if(device[i]==1){
  
       sprintf(tmpflg,"-focallength[%d]",i+1);
-      getreal(tmpflg,&focallength,0);
-      makepq_lens(PETSC_COMM_WORLD,pvec+i,qvec+i, Nx,Ny,Nz, rlx,rux,rly,ruy,rlz,ruz, devicedir, focallength,1/(freq[i]*hz),refphi);
+      getreal(tmpflg,focallength+i,0);
+      makepq_lens(PETSC_COMM_WORLD,pvec+i,qvec+i, Nx,Ny,Nz, rlx,rux,rly,ruy,rlz,ruz, devicedir[i], focallength[i],1/(freq[i]*hz),refphi[i]);
 
     }else{
       PetscPrintf(PETSC_COMM_WORLD,"ERROR: Provide device 0 beam deflector or 1 lens. \n");
@@ -379,7 +385,7 @@ int main(int argc, char **argv)
     (data+i)->pvec=pvec[i];
     (data+i)->qvec=qvec[i];
     (data+i)->outputbase=outputbase;
-
+    (data+i)->refphi=refphi+i;
   }
 
   /*---------Setup the epsopt and grad arrays----------------*/
@@ -429,6 +435,140 @@ int main(int argc, char **argv)
       }
     
   }
+
+  if(Job==2){
+  
+    int ifreq;
+    getint("-ifreq",&ifreq,0);
+    batchmeta(DegFree,epsopt,grad,data+ifreq);
+    sprintf(tmpflg,"freq%g_x.dat",freq[ifreq]);
+    printfile((data+ifreq)->x,tmpflg,6*Nxyz);
+
+    Vec epsFull;
+    VecDuplicate(vR,&epsFull);
+    ArrayToVec(epsopt,epsSReal);
+    MatMult(A,epsSReal,epsFReal);
+    VecPointwiseMult(epsFull,epsFReal,(data+ifreq)->epsDiff);
+    VecAXPY(epsFull,1.0,(data+ifreq)->epsmedium);
+    VecPointwiseMult(epsFull,epsFull,vR);
+    sprintf(tmpflg,"freq%g_eps.dat",freq[ifreq]);
+    printfile(epsFull,tmpflg,6*Nxyz);
+
+    sprintf(tmpflg,"freq%g_J.dat",freq[ifreq]);
+    printfile(J[ifreq],tmpflg,6*Nxyz);
+
+    sprintf(tmpflg,"freq%g_pvec.dat",freq[ifreq]);
+    printfile((data+ifreq)->pvec,tmpflg,6*Nxyz);
+
+    sprintf(tmpflg,"freq%g_qvec.dat",freq[ifreq]);
+    printfile((data+ifreq)->qvec,tmpflg,6*Nxyz);
+  
+  }
+
+
+  if(Job==3){
+
+    /*---------Optimize refphi--------*/
+    int phi_alg, phi_localalg, phi_maxeval, phi_maxtime;
+    double lphi, uphi;
+    getint("-phialg",&phi_alg,34);
+    getint("-philocalalg",&phi_localalg,0);
+    getint("-phimaxeval",&phi_maxeval,1000);
+    getint("-phimaxtime",&phi_maxtime,100000);
+    getreal("-lphi",&lphi,0);
+    getreal("-uphi",&uphi,2*PI);
+
+    int ifreq;
+    getint("-ifreq",&ifreq,0);
+
+    optimize_refphi(refphi[ifreq],DegFree,epsopt,data+ifreq,phi_alg,phi_localalg,phi_maxeval,phi_maxtime,&lphi,&uphi);
+    
+  }
+
+  if(Job==4){
+
+    /*---------Optimize eps--------*/
+    int eps_alg, eps_localalg, eps_maxeval, eps_maxtime;
+    getint("-epsalg",&eps_alg,24);
+    getint("-epslocalalg",&eps_localalg,0);
+    getint("-epsmaxeval",&eps_maxeval,1000);
+    getint("-epsmaxtime",&eps_maxtime,100000);
+
+    int ifreq;
+    getint("-ifreq",&ifreq,0);
+
+    optimize_eps(DegFree,epsopt,data+ifreq,eps_alg,eps_localalg,eps_maxeval,eps_maxtime);
+    
+  }
+
+  if(Job==5){
+
+    /*---------Optimize eps--------*/
+    int alg, localalg, maxeval, maxtime;
+    getint("-alg",&alg,24);
+    getint("-localalg",&localalg,0);
+    getint("-maxeval",&maxeval,50000);
+    getint("-maxtime",&maxtime,100000);
+
+    int nmodes;
+    getint("-nmodes",&nmodes,nfreq);
+
+    double initdummy;
+    getreal("-initdummy",&initdummy,-1);
+
+    /********OPT*********/
+
+    int ndof=DegFree+1;
+    double *dof, *lb, *ub;
+    dof = (double *) malloc(ndof*sizeof(double));
+    lb = (double *) malloc(DegFree*sizeof(double));
+    ub = (double *) malloc(DegFree*sizeof(double));
+    
+    for(i=0;i<DegFree;i++){
+      dof[i]=epsopt[i];
+      lb[i]=0;
+      ub[i]=1;
+    } 
+    dof[ndof-1]=initdummy;
+    lb[ndof-1]=-2;
+    ub[ndof-1]=2;
+
+    nlopt_opt opt;
+    nlopt_opt local_opt;
+
+
+    double maxf;
+    opt = nlopt_create(alg, ndof);
+    nlopt_set_lower_bounds(opt,lb);
+    nlopt_set_upper_bounds(opt,ub);
+    nlopt_set_maxeval(opt,maxeval);
+    nlopt_set_maxtime(opt,maxtime);
+    if(alg==11) nlopt_set_vector_storage(opt,4000);
+    if(localalg){
+      local_opt=nlopt_create(localalg, ndof);
+      nlopt_set_ftol_rel(local_opt, 1e-14);
+      nlopt_set_maxeval(local_opt,10000);
+      nlopt_set_local_optimizer(opt,local_opt);
+    }
+
+    int ifreq;
+    for(ifreq=0;ifreq<nmodes;ifreq++){
+      nlopt_add_inequality_constraint(opt,batchmaximin,data+ifreq,1e-8);
+    }
+
+    nlopt_set_max_objective(opt,maximinobjfun,NULL);
+    double result=nlopt_optimize(opt,dof,&maxf);
+
+    PetscPrintf(PETSC_COMM_WORLD,"----nlopt maximin returns %d \n",result);
+  
+    nlopt_destroy(opt);
+    if(localalg) nlopt_destroy(local_opt);
+
+    /********OPT********/
+
+  }
+
+
 
 /*------------------------------------------------*/
 /*------------------------------------------------*/
@@ -495,6 +635,52 @@ int main(int argc, char **argv)
 
   return 0;
 }
+
+double printfile(Vec x, const char *name, int N)
+{
+
+  VecScatter scat;
+  Vec vlocal;
+  IS scto, scfrom;
+  VecCreateSeq(PETSC_COMM_SELF,N,&vlocal);
+  ISCreateStride(PETSC_COMM_SELF,N,0,1,&scfrom);
+  ISCreateStride(PETSC_COMM_SELF,N,0,1,&scto);
+
+  // scatter x to vlocal;
+  VecScatterCreate(x,scfrom,vlocal,scto,&scat);
+  VecScatterBegin(scat,x,vlocal,INSERT_VALUES,SCATTER_FORWARD);
+  VecScatterEnd(scat,x,vlocal,INSERT_VALUES,SCATTER_FORWARD);
+  VecScatterDestroy(&scat);
+
+  // copy from vlocal to ptvlocal;
+  double *ptvlocal;
+  VecGetArray(vlocal,&ptvlocal);
+
+  int i;
+  double *tmp;
+  tmp=(double *) malloc(N*sizeof(double));
+  for(i=0;i<N;i++)
+    tmp[i] = ptvlocal[i];
+  VecRestoreArray(vlocal,&ptvlocal);
+
+  int rankA;
+  FILE *ptf;
+  MPI_Comm_rank(PETSC_COMM_WORLD, &rankA);
+
+  if(rankA==0)
+    {
+      ptf = fopen(name,"w");
+      for (i=0;i<N;i++)
+	fprintf(ptf,"%g \n",tmp[i]);
+      fclose(ptf);
+    }
+
+  VecDestroy(&vlocal);
+
+  return 0;
+
+}
+
 
 double pfunc_constr(int DegFree, double *epsopt, double *grad, void *data)
 {
@@ -572,5 +758,132 @@ PetscErrorCode setupKSP(MPI_Comm comm, KSP *kspout, PC *pcout, int solver, int i
   *pcout=pc;
 
   PetscFunctionReturn(0);
+
+}
+
+double optimize_refphi(double phi0, int DegFree, double *epsopt, void *data, int alg, int localalg, int maxeval, int maxtime, double *lphi, double *uphi)
+{
+
+  //initialize x;
+  batchmeta(DegFree,epsopt,NULL,data);
+  count=1;
+
+  double phivar=phi0;
+  nlopt_opt opt;
+  nlopt_opt local_opt;
+  
+  int ndof=1;
+  double maxf;
+  opt = nlopt_create(alg, ndof);
+  nlopt_set_lower_bounds(opt,lphi);
+  nlopt_set_upper_bounds(opt,uphi);
+  nlopt_set_maxeval(opt,maxeval);
+  nlopt_set_maxtime(opt,maxtime);
+  if(alg==11) nlopt_set_vector_storage(opt,4000);
+  if(localalg){
+    local_opt=nlopt_create(localalg, ndof);
+    nlopt_set_ftol_rel(local_opt, 1e-14);
+    nlopt_set_maxeval(local_opt,10000);
+    nlopt_set_local_optimizer(opt,local_opt);
+  }
+
+  nlopt_set_max_objective(opt,refphiopt,data);
+  double result=nlopt_optimize(opt,&phivar,&maxf);
+  
+  nlopt_destroy(opt);
+  if(localalg) nlopt_destroy(local_opt);
+  count=1;
+
+  return result;
+
+}
+
+double optimize_eps(int DegFree, double *epsopt, void *data, int alg, int localalg, int maxeval, int maxtime)
+{
+
+  nlopt_opt opt;
+  nlopt_opt local_opt;
+  double *lb, *ub;
+  lb = (double *) malloc(DegFree*sizeof(double));
+  ub = (double *) malloc(DegFree*sizeof(double));
+  int i;
+  for(i=0;i<DegFree;i++){
+    lb[i]=0;
+    ub[i]=1;
+  }
+
+  double maxf;
+  opt = nlopt_create(alg, DegFree);
+  nlopt_set_lower_bounds(opt,lb);
+  nlopt_set_upper_bounds(opt,ub);
+  nlopt_set_maxeval(opt,maxeval);
+  nlopt_set_maxtime(opt,maxtime);
+  if(alg==11) nlopt_set_vector_storage(opt,4000);
+  if(localalg){
+    local_opt=nlopt_create(localalg, DegFree);
+    nlopt_set_ftol_rel(local_opt, 1e-14);
+    nlopt_set_maxeval(local_opt,10000);
+    nlopt_set_local_optimizer(opt,local_opt);
+  }
+
+  nlopt_set_max_objective(opt,batchmeta,data);
+  double result=nlopt_optimize(opt,epsopt,&maxf);
+  
+  nlopt_destroy(opt);
+  if(localalg) nlopt_destroy(local_opt);
+
+  return result;
+
+}
+
+double optimize_freqmaximin(int DegFree, double *epsopt, void *data, int alg, int localalg, int maxeval, int maxtime, int nmodes, double initdummy)
+{
+
+  int ndof=DegFree+1;
+  double *dof, *lb, *ub;
+  dof = (double *) malloc(ndof*sizeof(double));
+  lb = (double *) malloc(DegFree*sizeof(double));
+  ub = (double *) malloc(DegFree*sizeof(double));
+
+  int i;
+  for(i=0;i<DegFree;i++){
+    dof[i]=epsopt[i];
+    lb[i]=0;
+    ub[i]=1;
+  } 
+  dof[ndof-1]=initdummy;
+  lb[ndof-1]=-2;
+  ub[ndof-1]=2;
+
+  nlopt_opt opt;
+  nlopt_opt local_opt;
+
+
+  double maxf;
+  opt = nlopt_create(alg, ndof);
+  nlopt_set_lower_bounds(opt,lb);
+  nlopt_set_upper_bounds(opt,ub);
+  nlopt_set_maxeval(opt,maxeval);
+  nlopt_set_maxtime(opt,maxtime);
+  if(alg==11) nlopt_set_vector_storage(opt,4000);
+  if(localalg){
+    local_opt=nlopt_create(localalg, ndof);
+    nlopt_set_ftol_rel(local_opt, 1e-14);
+    nlopt_set_maxeval(local_opt,10000);
+    nlopt_set_local_optimizer(opt,local_opt);
+  }
+
+  int ifreq;
+  for(ifreq=0;ifreq<nmodes;ifreq++){
+    nlopt_add_inequality_constraint(opt,batchmaximin,data+ifreq,1e-8);
+  }
+
+  nlopt_set_max_objective(opt,maximinobjfun,NULL);
+  double result=nlopt_optimize(opt,dof,&maxf);
+  
+  nlopt_destroy(opt);
+  if(localalg) nlopt_destroy(local_opt);
+
+  return result;
 
 }

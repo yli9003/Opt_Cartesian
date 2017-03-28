@@ -353,6 +353,7 @@ typedef struct{
   Vec pvec;
   Vec qvec;
   int outputbase;
+  double *refphi;
 } Meta;
 
 // from initialize.c
@@ -595,6 +596,8 @@ double batchmaximin(int DegFreeAll,double *epsoptAll, double *gradAll, void *dat
 
 double maximinobjfun(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
 
+double refphiopt(int ndof,double *refphi, double *grad, void *data);
+
 // from metascatter.c
 double metascat(int DegFree,double *epsopt, double *grad, void *data);
 
@@ -635,3 +638,12 @@ double chi3dsfg(int DegFree,double *epsopt, double *grad, void *data);
 double qfactor(int DegFree,double *epsopt, double *grad, void *data);
 
 PetscErrorCode makeBlock(MPI_Comm comm, Vec *bout, int Nx, int Ny, int Nz, int lx, int ux, int ly, int uy, int lz, int uz);
+
+// from batchlens.c
+PetscErrorCode SourceAngled(MPI_Comm comm, Vec *bout, int Nx, int Ny, int Nz, double hx, double hy, double hz, double lx, double ux, double ly, double uy, double lz, double uz, double amp, int Jdir, double kx, double ky, double kz);
+
+PetscErrorCode makepq_lens_inc(MPI_Comm comm, Vec *pout, Vec *qout, int Nx, int Ny, int Nz, int lx, int ux, int ly, int uy, int lz, int uz, int dir, double fcl, double theta_inc, double lambda, double refphi, int ix0, int iy0, int iz0);
+
+PetscErrorCode mirrorA1d(MPI_Comm comm, Mat *Aout, int Mx, int nlayers);
+
+PetscErrorCode mirrorA2d(MPI_Comm comm, Mat *Aout, int Mx, int My, int nlayers);

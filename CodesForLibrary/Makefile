@@ -1,4 +1,4 @@
-all: initialize.o MoperatorGeneral.o MoperatorGeneralBloch_XdL.o SourceGeneration.o PML.o PMLGeneral.o Eps.o MathTools.o MatVecMaker.o Output.o DifferentialOps.o mympisetup.o ldos.o projsimpoverlap.o singleldos.o ldosonly.o filters.o alpha.o FOM.o thgfom_arbitraryPol.o ldosconstraint.o ldoskconstraint.o ldoskconstraintepsomega.o ldoskconstraintnofilter.o ldoskonly.o lens.o c4v.o EP.o eigsolver.o eigsolver2.o eigsolvertrans.o chiral.o chiral2.o ldoskmaxconstraint.o ldoskminconstraint.o metasurface.o batchmeta.o metascatter.o sfg_arbitraryPol.o sfg_singleldos.o sfg_graphene.o c3v.o Qbooster.o layeredA.o chi3dsfg.o qfactor.o
+all: initialize.o MoperatorGeneral.o MoperatorGeneralBloch_XdL.o SourceGeneration.o PML.o PMLGeneral.o Eps.o MathTools.o MatVecMaker.o Output.o DifferentialOps.o mympisetup.o ldos.o projsimpoverlap.o singleldos.o ldosonly.o filters.o alpha.o FOM.o thgfom_arbitraryPol.o ldosconstraint.o ldoskconstraint.o ldoskconstraintepsomega.o ldoskconstraintnofilter.o ldoskonly.o lens.o c4v.o EP.o eigsolver.o eigsolver2.o eigsolvertrans.o chiral.o chiral2.o ldoskmaxconstraint.o ldoskminconstraint.o metasurface.o batchmeta.o metascatter.o sfg_arbitraryPol.o sfg_singleldos.o sfg_graphene.o c3v.o Qbooster.o layeredA.o chi3dsfg.o qfactor.o batchlens.o
 
 export PETSC_DIR=/opt/local/petsc-3.6.3
 export PETSC_ARCH=arch-opt
@@ -7,7 +7,7 @@ export SLEPC_DIR=/opt/local/slepc-3.6.2
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 include ${SLEPC_DIR}/lib/slepc/conf/slepc_common
-CLEANFILES =  initialize.o MoperatorGeneral.o MoperatorGeneralBloch_XdL.o SourceGeneration.o PML.o PMLGeneral.o Eps.o MathTools.o MatVecMaker.o Output.o DifferentialOps.o mympisetup.o ldos.o projsimpoverlap.o singleldos.o ldosonly.o filters.o alpha.o FOM.o thgfom_arbitraryPol.o ldosconstraint.o ldoskconstraint.o ldoskconstraintepsomega.o ldoskconstraintnofilter.o ldoskonly.o lens.o c4v.o EP.o eigsolver.o eigsolver2.o eigsolvertrans.o chiral.o chiral2.o ldoskmaxconstraint.o ldoskminconstraint.o metasurface.o batchmeta.o metascatter.o sfg_arbitraryPol.o sfg_singleldos.o sfg_graphene.o c3v.o Qbooster.o layeredA.o chi3dsfg.o qfactor.o
+CLEANFILES =  initialize.o MoperatorGeneral.o MoperatorGeneralBloch_XdL.o SourceGeneration.o PML.o PMLGeneral.o Eps.o MathTools.o MatVecMaker.o Output.o DifferentialOps.o mympisetup.o ldos.o projsimpoverlap.o singleldos.o ldosonly.o filters.o alpha.o FOM.o thgfom_arbitraryPol.o ldosconstraint.o ldoskconstraint.o ldoskconstraintepsomega.o ldoskconstraintnofilter.o ldoskonly.o lens.o c4v.o EP.o eigsolver.o eigsolver2.o eigsolvertrans.o chiral.o chiral2.o ldoskmaxconstraint.o ldoskminconstraint.o metasurface.o batchmeta.o metascatter.o sfg_arbitraryPol.o sfg_singleldos.o sfg_graphene.o c3v.o Qbooster.o layeredA.o chi3dsfg.o qfactor.o batchlens.o
 
 initialize: initialize.o
 	$(CLINKER) -Wall -g -o $@ initialize.o  
@@ -101,3 +101,5 @@ chi3dsfg:chi3dsfg.o
 	$(CLINKER) -Wall -g -o $@ chi3dsfg.o
 qfactor:qfactor.o
 	$(CLINKER) -Wall -g -o $@ qfactor.o
+batchlens:batchlens.o
+	$(CLINKER) -Wall -g -o $@ batchlens.o
