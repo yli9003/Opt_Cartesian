@@ -353,6 +353,7 @@ typedef struct{
   Vec pvec;
   Vec qvec;
   int outputbase;
+  double *refphi;
 } Meta;
 
 // from initialize.c
@@ -594,6 +595,8 @@ PetscErrorCode makepq_lens(MPI_Comm comm, Vec *pout, Vec *qout, int Nx, int Ny, 
 double batchmaximin(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
 
 double maximinobjfun(int DegFreeAll,double *epsoptAll, double *gradAll, void *data);
+
+double refphiopt(int ndof,double *refphi, double *grad, void *data);
 
 // from metascatter.c
 double metascat(int DegFree,double *epsopt, double *grad, void *data);

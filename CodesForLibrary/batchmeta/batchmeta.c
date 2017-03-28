@@ -52,7 +52,20 @@ double batchmeta(int DegFree,double *epsopt, double *grad, void *data)
   int outputbase = ptdata->outputbase;
 
   PetscPrintf(PETSC_COMM_WORLD,"----Calculating Batch Metasurface Phase. ------- \n");
+
+  Vec xconj,xmag,xmagsq,xmagrecp,xpq,xpqmagsq,phasesumvec,tmp,Grad,U,u,vgrad,epsgrad;
   
+  VecDuplicate(vR,&xconj);
+  VecDuplicate(vR,&xmag);
+  VecDuplicate(vR,&xmagsq);
+  VecDuplicate(vR,&xmagrecp);
+  VecDuplicate(vR,&xpq);
+  VecDuplicate(vR,&xpqmagsq);
+  VecDuplicate(vR,&phasesumvec);
+  VecDuplicate(vR,&tmp);
+  VecDuplicate(vR,&Grad);
+  VecDuplicate(vR,&U);
+  VecDuplicate(vR,&u);
   VecDuplicate(epsSReal,&vgrad);
   VecDuplicate(epsSReal,&epsgrad);
 
@@ -67,12 +80,17 @@ double batchmeta(int DegFree,double *epsopt, double *grad, void *data)
 
   // solve the two fundamental modes and their ldos
   SolveMatrix(PETSC_COMM_WORLD,ksp,Mtmp,b,x,its);
+  
+  /*
+  OutputMat(PETSC_COMM_WORLD,M,"M",".m");
+  OutputMat(PETSC_COMM_WORLD,Mtmp,"Mtmp",".m");
+  OutputVec(PETSC_COMM_WORLD,epsDiff,"epsDiff",".m");
+  OutputVec(PETSC_COMM_WORLD,b,"b",".m");
+  OutputVec(PETSC_COMM_WORLD,x,"x",".m");
+  */
 
   //Note: 
-  //qvec is a vector field.
-  //pvec is a scalar field.
-  //xmagrecp is a scalar field.
-  //phasesumvec is a vector field.
+  //everything is vector field; PointwiseMult cannot be used except for vR.
   //vector * scalar = vector (PointwiseMult can be used.)
   //scalar * scalar = scalar (PointwiseMult can be used.)
   //vector * vector = vector (CmpVecProd must be used.)
@@ -80,26 +98,28 @@ double batchmeta(int DegFree,double *epsopt, double *grad, void *data)
   VecWAXPY(xpq,1.0,x,qvec);
   MatMult(C,xpq,tmp);
   CmpVecProd(xpq,tmp,xpqmagsq);
-  VecPointwiseMult(xpqmagsq,xpqmagsq,vR);
   MatMult(C,x,xconj);
   CmpVecProd(x,xconj,xmagsq);
-  VecPointwiseMult(xmagsq,xmagsq,vR);
   VecWAXPY(phasesumvec,-1.0,xmagsq,xpqmagsq);
-  VecPointwiseMult(phasesumvec,phasesumvec,pvec); //Note that pvec is a scalar field.
   VecAXPY(phasesumvec,-1.0,pvec);
-  VecPointwiseMult(phasesumvec,phasesumvec,vR);
   VecCopy(xmagsq,xmag);
   VecSqrtAbs(xmag);
   MatMult(D,xmag,tmp);
-  VecWAXPY(xmagrecp,1.0,xmag,tmp); //Note that xmagrecp is a scalar field.
+  VecWAXPY(xmagrecp,1.0,xmag,tmp);
   VecReciprocal(xmagrecp);
-  VecPoinwiseMult(xmagrecp,xmagrecp,pvec); //Note that pvec is a scalar field.
-  VecPointwiseMult(phasesumvec,phasesumvec,xmagrecp);
+  VecPointwiseMult(xmagrecp,xmagrecp,vR);
+  CmpVecProd(xmagrecp,phasesumvec,tmp);
+  CmpVecProd(tmp,pvec,phasesumvec);
   VecPointwiseMult(phasesumvec,phasesumvec,vR);
 
   double phasesum;
   VecSum(phasesumvec,&phasesum);
   PetscPrintf(PETSC_COMM_WORLD,"---phase sum for freq %.4e at step %d is: %.8e\n", omega/(2*PI),count,phasesum);
+
+  double norm;
+  VecSum(pvec,&norm);
+  norm=2*norm;
+  PetscPrintf(PETSC_COMM_WORLD,"---normalized_phasesum for freq %.4e and at step %d is: %.8e\n", omega/(2*PI),count,phasesum/norm);
 
   /*-------------- Now store the epsilon at each step--------------*/
 
@@ -126,18 +146,21 @@ double batchmeta(int DegFree,double *epsopt, double *grad, void *data)
   /*-------take care of the gradient---------*/
   if (grad) {
 
-    VecWAXPY(U,-1.0,x,xpq);
-    VecPointwiseMult(U,U,xmagrecp);
+    CmpVecProd(pvec,qvec,tmp);
+    CmpVecProd(tmp,xmagrecp,U);
     VecScale(U,2.0);
     CmpVecProd(x,phasesumvec,tmp);
-    VecPointwiseMult(tmp,tmp,xmagrecp);
-    VecPointwiseMult(tmp,tmp,xmagrecp);
+    CmpVecProd(tmp,xmagrecp,Grad);
+    CmpVecProd(Grad,xmagrecp,tmp);
     VecAXPY(U,-1.0,tmp);
     KSPSolveTranspose(ksp,U,u);
 
     MatMult(C,u,Grad);
     CmpVecProd(Grad,epscoef,tmp);
     CmpVecProd(tmp,x,Grad);
+    VecPointwiseMult(Grad,Grad,vR);
+
+    VecScale(Grad,1/norm);
 
     MatMultTranspose(A,Grad,vgrad);
     
@@ -152,29 +175,203 @@ double batchmeta(int DegFree,double *epsopt, double *grad, void *data)
 
   count++;
 
+  VecDestroy(&xconj);
+  VecDestroy(&xmag);
+  VecDestroy(&xmagsq);
+  VecDestroy(&xmagrecp);
+  VecDestroy(&xpq);
+  VecDestroy(&xpqmagsq);
+  VecDestroy(&phasesumvec);
+  VecDestroy(&tmp);
+  VecDestroy(&Grad);
+  VecDestroy(&U);
+  VecDestroy(&u);
+  VecDestroy(&vgrad);
+  VecDestroy(&epsgrad);
+
   MatDestroy(&Mtmp);
 
-  return phasesum;
+  return phasesum/norm;
 }
 
-PetscErrorCode MakeVecPt(Vec VecPt, int Nx, int Ny, int Nz, int ix, int iy, int iz, int ic)
+
+
+#undef __FUNCT__ 
+#define __FUNCT__ "makepq_defl"
+PetscErrorCode makepq_defl(MPI_Comm comm, Vec *pout, Vec *qout, int Nx, int Ny, int Nz, int lx, int ux, int ly, int uy, int lz, int uz, int dir, double theta, double lambda, double refphi)
+{
+  int i, j, k, pos, N;
+  N = Nx*Ny*Nz;
+
+  Vec pvec, qvec, qvecconj;
+  PetscErrorCode ierr;
+  ierr = VecCreate(comm,&qvec);CHKERRQ(ierr);
+  ierr = VecSetSizes(qvec,PETSC_DECIDE,6*N);CHKERRQ(ierr);
+  ierr = VecSetFromOptions(qvec); CHKERRQ(ierr);
+  VecSet(qvec,0.0);
+
+  int ns, ne;
+  ierr = VecGetOwnershipRange(qvec, &ns, &ne); CHKERRQ(ierr);
+
+  double dl, phi, ampr, ampi;
+  
+  for (i=0;i<Nx;i++)
+    if ((i>=lx) && (i<ux))
+      {for (j=0; j<Ny;j++)
+	  if ((j>=ly) && (j<uy))
+	    { 
+	      for (k=0; k<Nz; k++)
+		if ((k>=lz) && (k<uz)) // uncomment this if z direction is not trivial;
+		  { pos = i*Ny*Nz + j*Nz + k;
+		    if ( ns < pos+dir*N+1 && ne > pos+dir*N){
+		      dl=((ux-lx>1)*(i-lx) + (uy-ly>1)*(j-ly) + (uz-lz>1)*(k-lz));
+		      phi = refphi - (2*PI/lambda) * sin(theta) * dl;
+		      ampr=cos(phi);
+		      ampi=sin(phi);
+		      if(dir==0) {
+			VecSetValue(qvec,pos+0*N,ampr,INSERT_VALUES);
+			VecSetValue(qvec,pos+3*N,ampi,INSERT_VALUES);
+		      }else if(dir==1){
+			VecSetValue(qvec,pos+1*N,ampr,INSERT_VALUES);
+			VecSetValue(qvec,pos+4*N,ampi,INSERT_VALUES);
+		      }else{
+			VecSetValue(qvec,pos+2*N,ampr,INSERT_VALUES);
+			VecSetValue(qvec,pos+5*N,ampi,INSERT_VALUES);
+		      }
+		    }
+		  }
+	    }
+	    
+      }
+  VecAssemblyBegin(qvec);
+  VecAssemblyEnd(qvec); 
+
+  VecDuplicate(qvec,&pvec);
+  VecDuplicate(qvec,&qvecconj);
+  MatMult(C,qvec,qvecconj);
+  CmpVecProd(qvec,qvecconj,pvec);
+  VecPointwiseMult(pvec,pvec,vR);
+
+  VecDestroy(&qvecconj);
+
+  *qout = qvec;
+  *pout = pvec;
+  PetscFunctionReturn(0);
+  
+}
+
+
+
+
+
+#undef __FUNCT__ 
+#define __FUNCT__ "makepq_lens"
+PetscErrorCode makepq_lens(MPI_Comm comm, Vec *pout, Vec *qout, int Nx, int Ny, int Nz, int lx, int ux, int ly, int uy, int lz, int uz, int dir, double focallength, double lambda, double refphi)
 {
 
-  VecSet(VecPt,0.0);
-  int posjreal= 0*3*Nx*Ny*Nz + ic*Nx*Ny*Nz + ix*Ny*Nz + iy*Nz + iz;
-  int posjimag= 1*3*Nx*Ny*Nz + ic*Nx*Ny*Nz + ix*Ny*Nz + iy*Nz + iz;
-  VecSetValue(VecPt,posjreal,1.0,ADD_VALUES);
-  VecSetValue(VecPt,posjimag,1.0,ADD_VALUES);
-  VecAssemblyBegin(VecPt);
-  VecAssemblyEnd(VecPt);
+  int i, j, k, pos, N;
+  N = Nx*Ny*Nz;
 
-  return 0;
+  double dl, phi, ampr, ampi;
+  Vec pvec, qvec, qvecconj;
+  PetscErrorCode ierr;
+  ierr = VecCreate(comm,&qvec);CHKERRQ(ierr);
+  ierr = VecSetSizes(qvec,PETSC_DECIDE,6*N);CHKERRQ(ierr);
+  ierr = VecSetFromOptions(qvec); CHKERRQ(ierr);
 
+  VecSet(qvec,0.0);
+  int ns, ne;
+  ierr = VecGetOwnershipRange(qvec, &ns, &ne); CHKERRQ(ierr);
+  for (i=0;i<Nx;i++)
+    {if ((i>=lx) && (i<ux))
+	{for (j=0; j<Ny;j++)
+	    {if ((j>=ly) && (j<uy))
+		{for (k=0; k<Nz; k++)
+		    {if ((k>=lz) && (k<uz)) 
+			{pos = i*Ny*Nz + j*Nz + k;
+			  if ( ns < pos+dir*N+1 && ne > pos+dir*N){
+			    PetscPrintf(comm,"DEBUG: I AM HERE IN makepq_lens.\n");
+ 			    dl=((ux-lx>1)*(i-lx) + (uy-ly>1)*(j-ly) + (uz-lz>1)*(k-lz));
+			    phi = refphi - (2*PI/lambda) * (sqrt(dl*dl + focallength*focallength)-focallength);
+			    ampr=cos(phi);
+			    ampi=sin(phi);
+			    PetscPrintf(comm,"DEBUG: ampr %g, ampi %g \n",ampr,ampi);
+			    if(dir==0) {
+			      VecSetValue(qvec,pos+0*N,ampr,INSERT_VALUES);
+			      VecSetValue(qvec,pos+3*N,ampi,INSERT_VALUES);
+			    }else if(dir==1){
+			      VecSetValue(qvec,pos+1*N,ampr,INSERT_VALUES);
+			      VecSetValue(qvec,pos+4*N,ampi,INSERT_VALUES);
+			    }else{
+			      VecSetValue(qvec,pos+2*N,ampr,INSERT_VALUES);
+			      VecSetValue(qvec,pos+5*N,ampi,INSERT_VALUES);
+			    }
+			  }
+			}
+		    }
+		}
+	    }
+	}
+    }
+  VecAssemblyBegin(qvec);
+  VecAssemblyEnd(qvec); 
+
+  /*
+  double *tmp;
+  tmp=(double *)malloc(6*N*sizeof(double));
+  for(i=0;i<6*N;i++) tmp[i]=0;
+  for (i=0;i<Nx;i++)
+    {if ((i>=lx) && (i<ux))
+	{for (j=0; j<Ny;j++)
+	    {if ((j>=ly) && (j<uy))
+		{for (k=0; k<Nz; k++)
+		    {if ((k>=lz) && (k<uz)) {
+			pos = i*Ny*Nz + j*Nz + k;
+			dl=((ux-lx>1)*(i-lx) + (uy-ly>1)*(j-ly) + (uz-lz>1)*(k-lz));
+			phi = refphi - (2*PI/lambda) * (sqrt(dl*dl + focallength*focallength)-focallength);
+			ampr=cos(phi);
+			ampi=sin(phi);
+			//PetscPrintf(comm,"DEBUG: dl %g phi %g \n",dl,phi);
+			if(dir==0) {
+			  tmp[pos+0*N]=ampr;
+			  tmp[pos+3*N]=ampi;
+			}else if(dir==1){
+			  tmp[pos+1*N]=ampr;
+			  tmp[pos+4*N]=ampi;
+			}else{
+			  tmp[pos+2*N]=ampr;
+			  tmp[pos+5*N]=ampi;
+			}
+		      }
+		    }
+		}
+	    }
+	}
+    }
+  VecSet(qvec,0.0);
+  VecAssemblyBegin(qvec);
+  VecAssemblyEnd(qvec); 
+  ArrayToVec(tmp,qvec);
+  free(tmp);
+  */
+
+  VecDuplicate(qvec,&pvec);
+  VecDuplicate(qvec,&qvecconj);
+  MatMult(C,qvec,qvecconj);
+  CmpVecProd(qvec,qvecconj,pvec);
+  VecPointwiseMult(pvec,pvec,vR);
+
+  VecDestroy(&qvecconj);
+
+  *qout = qvec;
+  *pout = pvec;
+  PetscFunctionReturn(0);
+  
 }
 
 #undef __FUNCT__
-#define __FUNCT__ "metasurfaceminimax"
-double metasurfaceminimax(int DegFreeAll,double *epsoptAll, double *gradAll, void *data)
+#define __FUNCT__ "batchmaximin"
+double batchmaximin(int DegFreeAll,double *epsoptAll, double *gradAll, void *data)
 {
   int DegFree=DegFreeAll-1;
   double *epsopt, *grad;
@@ -184,7 +381,7 @@ double metasurfaceminimax(int DegFreeAll,double *epsoptAll, double *gradAll, voi
   for(i=0;i<DegFree;i++){
     epsopt[i]=epsoptAll[i];
   }
-  double obj=metasurface(DegFree,epsopt,grad,data);
+  double obj=batchmeta(DegFree,epsopt,grad,data);
   count=count-1;
   for(i=0;i<DegFree;i++){
     gradAll[i]=-1.0*grad[i];
@@ -196,8 +393,8 @@ double metasurfaceminimax(int DegFreeAll,double *epsoptAll, double *gradAll, voi
 }
 
 #undef __FUNCT__
-#define __FUNCT__ "minimaxobjfun"
-double minimaxobjfun(int DegFreeAll,double *epsoptAll, double *gradAll, void *data)
+#define __FUNCT__ "maximinobjfun"
+double maximinobjfun(int DegFreeAll,double *epsoptAll, double *gradAll, void *data)
 {
 
   if(gradAll)
@@ -216,248 +413,83 @@ double minimaxobjfun(int DegFreeAll,double *epsoptAll, double *gradAll, void *da
 
   return epsoptAll[DegFreeAll-1];
 }
-#undef __FUNCT__ 
-#define __FUNCT__ "transmissionmeta"
-double transmissionmeta(int DegFree,double *epsopt, double *grad, void *data)
+
+#undef __FUNCT__
+#define __FUNCT__ "refphiopt"
+double refphiopt(int ndof,double *refphi, double *grad, void *data)
 {
-  
+
   PetscErrorCode ierr;
 
-  MetaSurfGroup *ptdata = (MetaSurfGroup *) data;
+  Meta *ptdata = (Meta *) data;
 
-  int Nx = ptdata->Nx;
-  int Ny = ptdata->Ny;
-  int Nz = ptdata->Nz;
-  Vec epsSReal = ptdata->epsSReal;
-  Vec epsFReal = ptdata->epsFReal;
   double omega = ptdata->omega;
-  Mat M = ptdata->M;
-  Mat A = ptdata->A;
-  Vec b = ptdata->b;
   Vec x = ptdata->x;
-  Vec epspmlQ  = ptdata->epspmlQ;
-  Vec epsmedium = ptdata->epsmedium;
-  Vec epsDiff = ptdata->epsDiff;
-  Vec epscoef = ptdata->epscoef;  
-  KSP ksp = ptdata->ksp;
-  int *its = ptdata->its; 
-  KSP refksp = ptdata->refksp;
-  int *refits = ptdata->refits;
-  double metaphase = ptdata->metaphase;
-  Vec VecPt = ptdata->VecPt;
-  int outputbase = ptdata->outputbase;
-  //char filenameComm[PETSC_MAX_PATH_LEN];
-  //strcpy(filenameComm,ptdata->filenameComm);
+  Vec pvec = ptdata->pvec;
+  Vec qvec = ptdata->qvec;
 
-  PetscPrintf(PETSC_COMM_WORLD,"----Calculating Metasurface Transmission. ------- \n");
-  
-  Vec xconj, xmag, uvstar, uvstarR, uvstarI, vI, tmp, Uone, u1, Utwo, u2, Grad1, Grad2, vgrad, epsgrad;
-  VecDuplicate(x,&xconj);
-  VecDuplicate(x,&xmag);
-  VecDuplicate(x,&uvstar);
-  VecDuplicate(x,&uvstarR);
-  VecDuplicate(x,&uvstarI);
-  VecDuplicate(x,&vI);
-  VecDuplicate(x,&tmp);
-  VecDuplicate(x,&Uone);
-  VecDuplicate(x,&u1);
-  VecDuplicate(x,&Utwo);
-  VecDuplicate(x,&u2);
-  VecDuplicate(x,&Grad1);
-  VecDuplicate(x,&Grad2);
+  PetscPrintf(PETSC_COMM_WORLD,"----Modifying qvec. ------- \n");
 
-  VecDuplicate(epsSReal,&vgrad);
-  VecDuplicate(epsSReal,&epsgrad);
+  PetscPrintf(PETSC_COMM_WORLD,"---refphi0 for freq %g and at step %d is %g (formerly).\n", omega/(2*PI),count,*(ptdata->refphi));
+  double phi=*refphi-*(ptdata->refphi);
+  *(ptdata->refphi)=*refphi;
+  PetscPrintf(PETSC_COMM_WORLD,"---refphi0 for freq %g and at step %d is %g (now).\n", omega/(2*PI),count,*(ptdata->refphi));
 
-  //Vec refField = ptdata->refField;
-  //Vec refFieldconj = ptdata->refFieldconj;
-  //double refmag = ptdata->refmag;
+  Vec xconj,xmag,xmagsq,xmagrecp,xpq,xpqmagsq,phasesumvec,tmp;
+  VecDuplicate(vR,&xconj);
+  VecDuplicate(vR,&xmag);
+  VecDuplicate(vR,&xmagsq);
+  VecDuplicate(vR,&xmagrecp);
+  VecDuplicate(vR,&xpq);
+  VecDuplicate(vR,&xpqmagsq);
+  VecDuplicate(vR,&phasesumvec);
+  VecDuplicate(vR,&tmp);
 
-  //********************************************
-  //make own refField;
-  Vec refField;
-  Vec refFieldconj;
-  double refmag;
-  VecDuplicate(x,&refField);
-  VecDuplicate(x,&refFieldconj);
-  Vec tmpepsS, tmpepsF, tmpx, tmpxconj, tmpxmag;
-  Mat tmpM;
-  VecDuplicate(epsSReal,&tmpepsS);
-  VecDuplicate(x,&tmpepsF);
-  VecDuplicate(x,&tmpx);
-  VecDuplicate(x,&tmpxconj);
-  VecDuplicate(x,&tmpxmag);
-  VecSet(tmpepsS,0);
-  MatMult(A,tmpepsS,tmpepsF);
-  MatDuplicate(M,MAT_COPY_VALUES,&tmpM);
-  ModifyMatDiag(tmpM, D, tmpepsF, epsDiff, epsmedium, epspmlQ, omega, Nx, Ny, Nz);
-  PetscPrintf(PETSC_COMM_WORLD,"++++++Note that this is refField calculation++++++\n");
-  SolveMatrix(PETSC_COMM_WORLD,refksp,tmpM,b,tmpx,refits);
-  PetscPrintf(PETSC_COMM_WORLD,"++++++Note that this is refField calculation DONE++++++\n");
-  MatMult(C,tmpx,tmpxconj);
-  CmpVecProd(tmpx,tmpxconj,tmpxmag);
-  VecPointwiseMult(tmpxmag,tmpxmag,vR);
-  VecPointwiseMult(tmpxmag,tmpxmag,VecPt);
-  VecSqrtAbs(tmpxmag);
-  VecSum(tmpxmag,&refmag);
-  VecCopy(tmpx,refField);
-  VecCopy(tmpxconj,refFieldconj);
-  VecDestroy(&tmpepsS);
-  VecDestroy(&tmpepsF);
-  VecDestroy(&tmpx);
-  VecDestroy(&tmpxconj);
-  VecDestroy(&tmpxmag);
-  MatDestroy(&tmpM);
-  //***********************************************
+  CmpVecScale(qvec, tmp, cos(phi), sin(phi));
+  VecCopy(tmp,qvec);
 
-  MatMult(D,vR,vI);
-
-  PetscPrintf(PETSC_COMM_WORLD,"!+!+!+!+!+!Note that this is FILTER calculation. \n");
-  RegzProj(DegFree,epsopt,epsSReal,epsgrad,pSIMP,bproj,etaproj,kspH,Hfilt,&itsH);
-  PetscPrintf(PETSC_COMM_WORLD,"!+!+!+!+!+!Note that this is FILTER calculation DONE. \n");
-
-  MatMult(A,epsSReal,epsFReal);
-
-  // Update the diagonals of M1, M2 and M3 Matrices;
-  Mat Mtmp;
-  MatDuplicate(M,MAT_COPY_VALUES,&Mtmp);
-  ModifyMatDiag(Mtmp, D, epsFReal, epsDiff, epsmedium, epspmlQ, omega, Nx, Ny, Nz);
-
-  // solve the two fundamental modes and their ldos
-  SolveMatrix(PETSC_COMM_WORLD,ksp,Mtmp,b,x,its);
-
+  VecWAXPY(xpq,1.0,x,qvec);
+  MatMult(C,xpq,tmp);
+  CmpVecProd(xpq,tmp,xpqmagsq);
   MatMult(C,x,xconj);
-  CmpVecProd(x,xconj,xmag);
-  VecPointwiseMult(xmag,xmag,vR);
-  VecPointwiseMult(xmag,xmag,VecPt);
+  CmpVecProd(x,xconj,xmagsq);
+  VecWAXPY(phasesumvec,-1.0,xmagsq,xpqmagsq);
+  VecAXPY(phasesumvec,-1.0,pvec);
+  VecCopy(xmagsq,xmag);
   VecSqrtAbs(xmag);
-  double xmagscalar;
-  VecSum(xmag,&xmagscalar);
+  VecPointwiseMult(xmag,xmag,vR);
+  MatMult(D,xmag,tmp);
+  VecWAXPY(xmagrecp,1.0,xmag,tmp);
+  VecReciprocal(xmagrecp);
+  VecPointwiseMult(xmagrecp,xmagrecp,vR);
+  CmpVecProd(xmagrecp,phasesumvec,tmp);
+  CmpVecProd(tmp,pvec,phasesumvec);
+  VecPointwiseMult(phasesumvec,phasesumvec,vR);
 
-  double trans=pow(xmagscalar/refmag,2);
-  PetscPrintf(PETSC_COMM_WORLD,"---transmission coefficient for freq %.4e at step %d is: %.8e\n", omega/(2*PI),count,trans);
 
-  /*------------------------------------------------*/
-  /*------------------------------------------------*/
 
-  /*-------------- Now store the epsilon at each step--------------*/
+  double phasesum;
+  VecSum(phasesumvec,&phasesum);
+  PetscPrintf(PETSC_COMM_WORLD,"---phase sum for freq %.4e and at step %d is: %.8e\n", omega/(2*PI),count,phasesum);
 
-  char buffer [100];
-
-  int STORE=1;    
-  if(STORE==1 && (count%outputbase==0))
-    {
-      sprintf(buffer,"%.5depsSReal.m",count);
-      OutputVec(PETSC_COMM_WORLD, epsSReal, "optstep", buffer);
-      
-      FILE *tmpfile;
-      int i;
-      tmpfile = fopen(strcat(buffer,"DOF.txt"),"w");
-      for (i=0;i<DegFree;i++){
-      fprintf(tmpfile,"%0.16e \n",epsopt[i]);}
-      fclose(tmpfile);
-
-    }
-  
-  /*------------------------------------------------*/
-
-  /*-------take care of the gradient---------*/
-  if (grad) {
-    VecCopy(x,Uone);
-    VecPointwiseMult(Uone,Uone,VecPt);
-    KSPSolveTranspose(ksp,Uone,u1);
-    MatMult(C,u1,Grad1);
-    CmpVecProd(Grad1,epscoef,tmp);
-    CmpVecProd(tmp,x,Grad1);
-    VecPointwiseMult(Grad1,Grad1,vR);
-    VecScale(Grad1,2.0/pow(refmag,2));
-    
-    VecSet(tmp,0.0);
-    VecAXPY(tmp,1.0,Grad1);
-
-    MatMultTranspose(A,tmp,vgrad);
-    
-    //correction from filters
-    ierr=VecPointwiseMult(vgrad,vgrad,epsgrad); CHKERRQ(ierr);
-    KSPSolveTranspose(kspH,vgrad,epsgrad);
-    
-    // copy vgrad (distributed vector) to a regular array grad;
-    ierr = VecToArray(epsgrad,grad,scatter,from,to,vgradlocal,DegFree);
-  
-  }
+  double norm;
+  VecSum(pvec,&norm);
+  norm=2*norm;
+  PetscPrintf(PETSC_COMM_WORLD,"---normalized_phasesum for freq %.4e and at step %d is: %.8e\n", omega/(2*PI),count,phasesum/norm);
 
   count++;
 
-  MatDestroy(&Mtmp);
-
   VecDestroy(&xconj);
   VecDestroy(&xmag);
-  VecDestroy(&uvstar);
-  VecDestroy(&uvstarR);
-  VecDestroy(&uvstarI);
-  VecDestroy(&vI);
+  VecDestroy(&xmagsq);
+  VecDestroy(&xmagrecp);
+  VecDestroy(&xpq);
+  VecDestroy(&xpqmagsq);
+  VecDestroy(&phasesumvec);
   VecDestroy(&tmp);
-  VecDestroy(&Uone);
-  VecDestroy(&u1);
-  VecDestroy(&Utwo);
-  VecDestroy(&u2);
-  VecDestroy(&Grad1);
-  VecDestroy(&Grad2);
 
-  VecDestroy(&vgrad);
-  VecDestroy(&epsgrad);
+  if(grad)
+    PetscPrintf(PETSC_COMM_WORLD,"---ERROR: you must not use a gradient algorithm for ref optimization.\n");
 
-  VecDestroy(&refField);
-  VecDestroy(&refFieldconj);
-
-  return trans;
-}
-
-#undef __FUNCT__
-#define __FUNCT__ "transmissionmetaconstr"
-double transmissionmetaconstr(int DegFreeAll,double *epsoptAll, double *gradAll, void *data)
-{
-  //double mintrans = 0.1; //Hard coded; to be fixed later
-
-  int DegFree=DegFreeAll-1;
-  double *epsopt, *grad;
-  epsopt = (double *) malloc(DegFree*sizeof(double));
-  grad = (double *) malloc(DegFree*sizeof(double));
-  int i;
-  for(i=0;i<DegFree;i++){
-    epsopt[i]=epsoptAll[i];
-  }
-  double obj=transmissionmeta(DegFree,epsopt,grad,data);
-  count=count-1;
-  for(i=0;i<DegFree;i++){
-    gradAll[i]=-1.0*grad[i];
-  }
-  gradAll[DegFreeAll-1]=0;
-
-  return mintrans - obj;
-  
-}
-
-#undef __FUNCT__
-#define __FUNCT__ "transmissionminimax"
-double transmissionminimax(int DegFreeAll,double *epsoptAll, double *gradAll, void *data)
-{
-
-  int DegFree=DegFreeAll-1;
-  double *epsopt, *grad;
-  epsopt = (double *) malloc(DegFree*sizeof(double));
-  grad = (double *) malloc(DegFree*sizeof(double));
-  int i;
-  for(i=0;i<DegFree;i++){
-    epsopt[i]=epsoptAll[i];
-  }
-  double obj=transmissionmeta(DegFree,epsopt,grad,data);
-  count=count-1;
-  for(i=0;i<DegFree;i++){
-    gradAll[i]= grad[i];
-  }
-  gradAll[DegFreeAll-1]=-1;
-
-  return obj - epsoptAll[DegFreeAll-1];
-  
+  return phasesum;
 }

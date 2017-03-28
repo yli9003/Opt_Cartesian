@@ -116,6 +116,11 @@ double batchmeta(int DegFree,double *epsopt, double *grad, void *data)
   VecSum(phasesumvec,&phasesum);
   PetscPrintf(PETSC_COMM_WORLD,"---phase sum for freq %.4e at step %d is: %.8e\n", omega/(2*PI),count,phasesum);
 
+  double norm;
+  VecSum(pvec,&norm);
+  norm=2*norm;
+  PetscPrintf(PETSC_COMM_WORLD,"---normalized_phasesum for freq %.4e and at step %d is: %.8e\n", omega/(2*PI),count,phasesum/norm);
+
   /*-------------- Now store the epsilon at each step--------------*/
 
   char buffer [100];
@@ -265,6 +270,7 @@ PetscErrorCode makepq_lens(MPI_Comm comm, Vec *pout, Vec *qout, int Nx, int Ny, 
   int i, j, k, pos, N;
   N = Nx*Ny*Nz;
 
+  double dl, phi, ampr, ampi;
   Vec pvec, qvec, qvecconj;
   PetscErrorCode ierr;
   ierr = VecCreate(comm,&qvec);CHKERRQ(ierr);
@@ -272,42 +278,80 @@ PetscErrorCode makepq_lens(MPI_Comm comm, Vec *pout, Vec *qout, int Nx, int Ny, 
   ierr = VecSetFromOptions(qvec); CHKERRQ(ierr);
 
   VecSet(qvec,0.0);
-  
   int ns, ne;
   ierr = VecGetOwnershipRange(qvec, &ns, &ne); CHKERRQ(ierr);
-
-  double dl, phi, ampr, ampi;
-
   for (i=0;i<Nx;i++)
-    if ((i>=lx) && (i<ux))
-      {for (j=0; j<Ny;j++)
-	  if ((j>=ly) && (j<uy))
-	    { 
-	      for (k=0; k<Nz; k++)
-		if ((k>=lz) && (k<uz)) 
-		  { pos = i*Ny*Nz + j*Nz + k;
-		    if ( ns < pos+dir*N+1 && ne > pos+dir*N){
-		      dl=((ux-lx>1)*(i-lx) + (uy-ly>1)*(j-ly) + (uz-lz>1)*(k-lz));
-		      phi = refphi - (2*PI/lambda) * (sqrt(dl*dl + focallength*focallength)-focallength);
-		      ampr=cos(phi);
-		      ampi=sin(phi);
-		      if(dir==0) {
-			VecSetValue(qvec,pos+0*N,ampr,INSERT_VALUES);
-			VecSetValue(qvec,pos+3*N,ampi,INSERT_VALUES);
-		      }else if(dir==1){
-			VecSetValue(qvec,pos+1*N,ampr,INSERT_VALUES);
-			VecSetValue(qvec,pos+4*N,ampi,INSERT_VALUES);
-		      }else{
-			VecSetValue(qvec,pos+2*N,ampr,INSERT_VALUES);
-			VecSetValue(qvec,pos+5*N,ampi,INSERT_VALUES);
-		      }
+    {if ((i>=lx) && (i<ux))
+	{for (j=0; j<Ny;j++)
+	    {if ((j>=ly) && (j<uy))
+		{for (k=0; k<Nz; k++)
+		    {if ((k>=lz) && (k<uz)) 
+			{pos = i*Ny*Nz + j*Nz + k;
+			  if ( ns < pos+dir*N+1 && ne > pos+dir*N){
+			    PetscPrintf(comm,"DEBUG: I AM HERE IN makepq_lens.\n");
+ 			    dl=((ux-lx>1)*(i-lx) + (uy-ly>1)*(j-ly) + (uz-lz>1)*(k-lz));
+			    phi = refphi - (2*PI/lambda) * (sqrt(dl*dl + focallength*focallength)-focallength);
+			    ampr=cos(phi);
+			    ampi=sin(phi);
+			    PetscPrintf(comm,"DEBUG: ampr %g, ampi %g \n",ampr,ampi);
+			    if(dir==0) {
+			      VecSetValue(qvec,pos+0*N,ampr,INSERT_VALUES);
+			      VecSetValue(qvec,pos+3*N,ampi,INSERT_VALUES);
+			    }else if(dir==1){
+			      VecSetValue(qvec,pos+1*N,ampr,INSERT_VALUES);
+			      VecSetValue(qvec,pos+4*N,ampi,INSERT_VALUES);
+			    }else{
+			      VecSetValue(qvec,pos+2*N,ampr,INSERT_VALUES);
+			      VecSetValue(qvec,pos+5*N,ampi,INSERT_VALUES);
+			    }
+			  }
+			}
 		    }
-		  }
+		}
 	    }
-	    
-      }
+	}
+    }
   VecAssemblyBegin(qvec);
   VecAssemblyEnd(qvec); 
+
+  /*
+  double *tmp;
+  tmp=(double *)malloc(6*N*sizeof(double));
+  for(i=0;i<6*N;i++) tmp[i]=0;
+  for (i=0;i<Nx;i++)
+    {if ((i>=lx) && (i<ux))
+	{for (j=0; j<Ny;j++)
+	    {if ((j>=ly) && (j<uy))
+		{for (k=0; k<Nz; k++)
+		    {if ((k>=lz) && (k<uz)) {
+			pos = i*Ny*Nz + j*Nz + k;
+			dl=((ux-lx>1)*(i-lx) + (uy-ly>1)*(j-ly) + (uz-lz>1)*(k-lz));
+			phi = refphi - (2*PI/lambda) * (sqrt(dl*dl + focallength*focallength)-focallength);
+			ampr=cos(phi);
+			ampi=sin(phi);
+			//PetscPrintf(comm,"DEBUG: dl %g phi %g \n",dl,phi);
+			if(dir==0) {
+			  tmp[pos+0*N]=ampr;
+			  tmp[pos+3*N]=ampi;
+			}else if(dir==1){
+			  tmp[pos+1*N]=ampr;
+			  tmp[pos+4*N]=ampi;
+			}else{
+			  tmp[pos+2*N]=ampr;
+			  tmp[pos+5*N]=ampi;
+			}
+		      }
+		    }
+		}
+	    }
+	}
+    }
+  VecSet(qvec,0.0);
+  VecAssemblyBegin(qvec);
+  VecAssemblyEnd(qvec); 
+  ArrayToVec(tmp,qvec);
+  free(tmp);
+  */
 
   VecDuplicate(qvec,&pvec);
   VecDuplicate(qvec,&qvecconj);
@@ -316,8 +360,6 @@ PetscErrorCode makepq_lens(MPI_Comm comm, Vec *pout, Vec *qout, int Nx, int Ny, 
   VecPointwiseMult(pvec,pvec,vR);
 
   VecDestroy(&qvecconj);
-
-
 
   *qout = qvec;
   *pout = pvec;
@@ -368,4 +410,84 @@ double maximinobjfun(int DegFreeAll,double *epsoptAll, double *gradAll, void *da
   count++;
 
   return epsoptAll[DegFreeAll-1];
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "refphiopt"
+double refphiopt(int ndof,double *refphi, double *grad, void *data)
+{
+
+  PetscErrorCode ierr;
+
+  Meta *ptdata = (Meta *) data;
+
+  double omega = ptdata->omega;
+  Vec x = ptdata->x;
+  Vec pvec = ptdata->pvec;
+  Vec qvec = ptdata->qvec;
+
+  PetscPrintf(PETSC_COMM_WORLD,"----Modifying qvec. ------- \n");
+
+  PetscPrintf(PETSC_COMM_WORLD,"---refphi0 for freq %g and at step %d is %g (formerly).\n", omega/(2*PI),count,*(ptdata->refphi));
+  double phi=*refphi-*(ptdata->refphi);
+  *(ptdata->refphi)=*refphi;
+  PetscPrintf(PETSC_COMM_WORLD,"---refphi0 for freq %g and at step %d is %g (now).\n", omega/(2*PI),count,*(ptdata->refphi));
+
+  Vec xconj,xmag,xmagsq,xmagrecp,xpq,xpqmagsq,phasesumvec,tmp;
+  VecDuplicate(vR,&xconj);
+  VecDuplicate(vR,&xmag);
+  VecDuplicate(vR,&xmagsq);
+  VecDuplicate(vR,&xmagrecp);
+  VecDuplicate(vR,&xpq);
+  VecDuplicate(vR,&xpqmagsq);
+  VecDuplicate(vR,&phasesumvec);
+  VecDuplicate(vR,&tmp);
+
+  CmpVecScale(qvec, tmp, cos(phi), sin(phi));
+  VecCopy(tmp,qvec);
+
+  VecWAXPY(xpq,1.0,x,qvec);
+  MatMult(C,xpq,tmp);
+  CmpVecProd(xpq,tmp,xpqmagsq);
+  MatMult(C,x,xconj);
+  CmpVecProd(x,xconj,xmagsq);
+  VecWAXPY(phasesumvec,-1.0,xmagsq,xpqmagsq);
+  VecAXPY(phasesumvec,-1.0,pvec);
+  VecCopy(xmagsq,xmag);
+  VecSqrtAbs(xmag);
+  VecPointwiseMult(xmag,xmag,vR);
+  MatMult(D,xmag,tmp);
+  VecWAXPY(xmagrecp,1.0,xmag,tmp);
+  VecReciprocal(xmagrecp);
+  VecPointwiseMult(xmagrecp,xmagrecp,vR);
+  CmpVecProd(xmagrecp,phasesumvec,tmp);
+  CmpVecProd(tmp,pvec,phasesumvec);
+  VecPointwiseMult(phasesumvec,phasesumvec,vR);
+
+
+
+  double phasesum;
+  VecSum(phasesumvec,&phasesum);
+  PetscPrintf(PETSC_COMM_WORLD,"---phase sum for freq %.4e and at step %d is: %.8e\n", omega/(2*PI),count,phasesum);
+
+  double norm;
+  VecSum(pvec,&norm);
+  norm=2*norm;
+  PetscPrintf(PETSC_COMM_WORLD,"---normalized_phasesum for freq %.4e and at step %d is: %.8e\n", omega/(2*PI),count,phasesum/norm);
+
+  count++;
+
+  VecDestroy(&xconj);
+  VecDestroy(&xmag);
+  VecDestroy(&xmagsq);
+  VecDestroy(&xmagrecp);
+  VecDestroy(&xpq);
+  VecDestroy(&xpqmagsq);
+  VecDestroy(&phasesumvec);
+  VecDestroy(&tmp);
+
+  if(grad)
+    PetscPrintf(PETSC_COMM_WORLD,"---ERROR: you must not use a gradient algorithm for ref optimization.\n");
+
+  return phasesum;
 }
