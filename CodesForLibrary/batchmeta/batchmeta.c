@@ -50,6 +50,7 @@ double batchmeta(int DegFree,double *epsopt, double *grad, void *data)
   Vec pvec = ptdata->pvec;
   Vec qvec = ptdata->qvec;
   int outputbase = ptdata->outputbase;
+  double inc_angle = ptdata->inc_angle;
 
   PetscPrintf(PETSC_COMM_WORLD,"----Calculating Batch Metasurface Phase. ------- \n");
 
@@ -119,7 +120,7 @@ double batchmeta(int DegFree,double *epsopt, double *grad, void *data)
   double norm;
   VecSum(pvec,&norm);
   norm=2*norm;
-  PetscPrintf(PETSC_COMM_WORLD,"---normalized_phasesum for freq %.4e and at step %d is: %.8e\n", omega/(2*PI),count,phasesum/norm);
+  PetscPrintf(PETSC_COMM_WORLD,"---normalized_phasesum for freq %.4e and angle %.4e at step %d is: %.8e\n", omega/(2*PI),inc_angle,count,phasesum/norm);
 
   /*-------------- Now store the epsilon at each step--------------*/
 
@@ -131,12 +132,14 @@ double batchmeta(int DegFree,double *epsopt, double *grad, void *data)
       sprintf(buffer,"%.5depsSReal.m",count);
       OutputVec(PETSC_COMM_WORLD, epsSReal, filenameComm, buffer);
       
+      /*
       FILE *tmpfile;
       int i;
       tmpfile = fopen(strcat(buffer,"DOF.txt"),"w");
       for (i=0;i<DegFree;i++){
       fprintf(tmpfile,"%0.16e \n",epsopt[i]);}
       fclose(tmpfile);
+      */
 
     }
   
@@ -373,6 +376,9 @@ PetscErrorCode makepq_lens(MPI_Comm comm, Vec *pout, Vec *qout, int Nx, int Ny, 
 #define __FUNCT__ "batchmaximin"
 double batchmaximin(int DegFreeAll,double *epsoptAll, double *gradAll, void *data)
 {
+
+  PetscPrintf(PETSC_COMM_WORLD,"**This is BatchMaxiMin**\n");
+
   int DegFree=DegFreeAll-1;
   double *epsopt, *grad;
   epsopt = (double *) malloc(DegFree*sizeof(double));

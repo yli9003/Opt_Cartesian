@@ -14,7 +14,7 @@ extern IS from, to;
 
 #undef __FUNCT__
 #define __FUNCT__ "SourceAngled"
-PetscErrorCode SourceAngled(MPI_Comm comm, Vec *bout, int Nx, int Ny, int Nz, double hx, double hy, double hz, double lx, double ux, double ly, double uy, double lz, double uz, double amp, int Jdir, double kx, double ky, double kz)
+PetscErrorCode SourceAngled(MPI_Comm comm, Vec *bout, int Nx, int Ny, int Nz, double hx, double hy, double hz, double lx, double ux, double ly, double uy, double lz, double uz, double amp, int Jdir, double kx, double ky, double kz, int jx0, int jy0, int jz0)
 {
   int i, j, k, pos, N;
   N = Nx*Ny*Nz;
@@ -41,8 +41,8 @@ PetscErrorCode SourceAngled(MPI_Comm comm, Vec *bout, int Nx, int Ny, int Nz, do
                 if ((k*hz>=lz) && (k*hz<uz)) 
 		  { pos = i*Ny*Nz + j*Nz + k;
 		    if ( ns < pos+Jdir*N+1 && ne > pos + Jdir*N){
-		      preal=amp*cos(kx*i*hx+ky*j*hy+kz*k*hz);
-		      pimag=amp*sin(kx*i*hx+ky*j*hy+kz*k*hz);
+		      preal=amp*cos(kx*(i-jx0)*hx+ky*(j-jy0)*hy+kz*(k-jz0)*hz);
+		      pimag=amp*sin(kx*(i-jx0)*hx+ky*(j-jy0)*hy+kz*(k-jz0)*hz);
 		      VecSetValue(b,pos+Jdir*N,    preal,INSERT_VALUES);
 		      VecSetValue(b,pos+Jdir*N+3*N,pimag,INSERT_VALUES);
 		    }
@@ -88,7 +88,8 @@ PetscErrorCode makepq_lens_inc(MPI_Comm comm, Vec *pout, Vec *qout, int Nx, int 
 			  if ( ns < pos+dir*N+1 && ne > pos+dir*N){
 			    PetscPrintf(comm,"DEBUG: I AM HERE IN makepq_lens.\n");
  			    dl=((ux-lx>1)*(i-ix0) + (uy-ly>1)*(j-iy0) + (uz-lz>1)*(k-iz0));
-			    phi = refphi - (2*PI/lambda) * (sqrt(pow(fcl*tan(theta_inc)-dl,2)+pow(fcl,2))-(fcl/cos(theta_inc)));
+			    //phi = refphi - (2*PI/lambda) * (sqrt(pow(fcl*tan(theta_inc)-dl,2)+pow(fcl,2))-(fcl/cos(theta_inc)));
+			    phi = refphi - (2*PI/lambda) * (sqrt(pow(dl,2)+pow(fcl,2))-(fcl/cos(theta_inc)));
 			    ampr=cos(phi);
 			    ampi=sin(phi);
 			    PetscPrintf(comm,"DEBUG: ampr %g, ampi %g \n",ampr,ampi);

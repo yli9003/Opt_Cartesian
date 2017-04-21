@@ -100,12 +100,16 @@ int main(int argc, char **argv)
 
   //same block source position for all currents
   double jlx, jux, jly, juy, jlz, juz;
+  int jx0,jy0,jz0;
   getreal("-jlx",&jlx,0);
   getreal("-jux",&jux,Nx*hx);
   getreal("-jly",&jly,0);
   getreal("-juy",&juy,Ny*hy);
   getreal("-jlz",&jlz,Npmlz*hz+1/5);
   getreal("-juz",&juz,jlz+hz);
+  getint("-jx0",&jx0,0);
+  getint("-jy0",&jy0,0);
+  getint("-jz0",&jz0,0);
 
   //same measurement / opt plance for all currents
   int rlx, rux, rly, ruy, rlz, ruz, rx0,ry0,rz0;
@@ -368,10 +372,11 @@ int main(int argc, char **argv)
     for(j=0;j<nangle;j++){
       jpt=j*nfreq+i;
       //jpt=i*nangle+j;
+      //jkx=2*PI*freq[i]*sqrt(epssub[i])*sin(inc_angle[jpt]*PI/180);
       jkx=2*PI*freq[i]*sin(inc_angle[jpt]*PI/180);
       jky=0;
       jkz=0;
-      SourceAngled(PETSC_COMM_WORLD, J+jpt, Nx,Ny,Nz, hx,hy,hz, jlx,jux,jly,juy,jlz,juz, 1.0/hz,Jdir[i],jkx,jky,jkz);
+      SourceAngled(PETSC_COMM_WORLD, J+jpt, Nx,Ny,Nz, hx,hy,hz, jlx,jux,jly,juy,jlz,juz, 1.0/hz,Jdir[i],jkx,jky,jkz,jx0,jy0,jz0);
       VecScale(J[jpt],Jmag[i]);
       VecDuplicate(vR,b+jpt);
       MatMult(D,J[jpt],b[jpt]);CHKERRQ(ierr);
@@ -380,7 +385,7 @@ int main(int argc, char **argv)
       VecPointwiseMult(weightedJ[jpt],J[jpt],weight);
       VecDuplicate(vR,x+jpt);
 
-      makepq_lens_inc(PETSC_COMM_WORLD,pvec+jpt,qvec+jpt, Nx,Ny,Nz, rlx,rux,rly,ruy,rlz,ruz, devicedir[i], focallength[i], inc_angle[jpt]*PI/180, 1/(freq[i]*hz),refphi[i], rx0,ry0,rz0);
+      makepq_lens_inc(PETSC_COMM_WORLD,pvec+jpt,qvec+jpt, Nx,Ny,Nz, rlx,rux,rly,ruy,rlz,ruz, devicedir[i], focallength[i], inc_angle[jpt]*PI/180, 1/(freq[i]*hz),refphi[jpt], rx0,ry0,rz0);
     }
 
     setupKSP(PETSC_COMM_WORLD,ksp+i,pc+i,solver,iteronly);
@@ -409,6 +414,7 @@ int main(int argc, char **argv)
       (data+jpt)->qvec=qvec[jpt];
       (data+jpt)->outputbase=outputbase;
       (data+jpt)->refphi=refphi+jpt;
+      (data+jpt)->inc_angle=inc_angle[jpt];
     }
   }
 
@@ -557,8 +563,8 @@ int main(int argc, char **argv)
     int ndof=DegFree+1;
     double *dof, *lb, *ub;
     dof = (double *) malloc(ndof*sizeof(double));
-    lb = (double *) malloc(DegFree*sizeof(double));
-    ub = (double *) malloc(DegFree*sizeof(double));
+    lb = (double *) malloc(ndof*sizeof(double));
+    ub = (double *) malloc(ndof*sizeof(double));
     
     for(i=0;i<DegFree;i++){
       dof[i]=epsopt[i];
@@ -587,14 +593,18 @@ int main(int argc, char **argv)
       nlopt_set_local_optimizer(opt,local_opt);
     }
 
-    int ifreq;
+    int ifreq,iangle,ipt;
     for(ifreq=0;ifreq<nmodes;ifreq++){
-      nlopt_add_inequality_constraint(opt,batchmaximin,data+ifreq,1e-8);
+      for(iangle=0;iangle<nangle;iangle++){
+	  ipt=iangle*nfreq+ifreq;
+	  //ipt=ifreq*nangle+iangle;
+	  nlopt_add_inequality_constraint(opt,batchmaximin,data+ipt,1e-8);
+      }
     }
 
     nlopt_set_max_objective(opt,maximinobjfun,NULL);
     double result=nlopt_optimize(opt,dof,&maxf);
-
+    
     PetscPrintf(PETSC_COMM_WORLD,"----nlopt maximin returns %d \n",result);
   
     nlopt_destroy(opt);
