@@ -146,6 +146,9 @@ int main(int argc, char **argv)
   int readlubsfromfile;
   getint("-readlubsfromfile",&readlubsfromfile,0);
 
+  int chiefray;
+  getint("-chiefray",&chiefray,0);
+
   /**********************************************/
   int tmpnlayers;
   getint("-nlayers",&tmpnlayers,1);
@@ -385,7 +388,7 @@ int main(int argc, char **argv)
       VecPointwiseMult(weightedJ[jpt],J[jpt],weight);
       VecDuplicate(vR,x+jpt);
 
-      makepq_lens_inc(PETSC_COMM_WORLD,pvec+jpt,qvec+jpt, Nx,Ny,Nz, rlx,rux,rly,ruy,rlz,ruz, devicedir[i], focallength[i], inc_angle[jpt]*PI/180, 1/(freq[i]*hz),refphi[jpt], rx0,ry0,rz0);
+      makepq_lens_inc(PETSC_COMM_WORLD,pvec+jpt,qvec+jpt, Nx,Ny,Nz, rlx,rux,rly,ruy,rlz,ruz, devicedir[i], focallength[i], inc_angle[jpt]*PI/180, 1/(freq[i]*hz),refphi[jpt], rx0,ry0,rz0, chiefray);
     }
 
     setupKSP(PETSC_COMM_WORLD,ksp+i,pc+i,solver,iteronly);
