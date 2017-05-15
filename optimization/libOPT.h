@@ -645,6 +645,8 @@ PetscErrorCode SourceAngled(MPI_Comm comm, Vec *bout, int Nx, int Ny, int Nz, do
 
 PetscErrorCode makepq_lens_inc(MPI_Comm comm, Vec *pout, Vec *qout, int Nx, int Ny, int Nz, int lx, int ux, int ly, int uy, int lz, int uz, int dir, double fcl, double theta_inc, double lambda, double refphi, int ix0, int iy0, int iz0, int chiefray);
 
+PetscErrorCode makepq_linear(MPI_Comm comm, Vec *pout, Vec *qout, int Nx, int Ny, int Nz, int lx, int ux, int ly, int uy, int lz, int uz, int dir, double lambda, double refphi, int ix0, int iy0, int iz0, double slope);
+
 PetscErrorCode mirrorA1d(MPI_Comm comm, Mat *Aout, int Mx, int nlayers);
 
 PetscErrorCode mirrorA2d(MPI_Comm comm, Mat *Aout, int Mx, int My, int nlayers);
